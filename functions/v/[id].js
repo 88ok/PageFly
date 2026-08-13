@@ -1,4 +1,5 @@
 import { renderViewPage } from "../../src/render.js";
+import { NOT_FOUND_HTML } from "../../src/errorPage.js";
 
 export async function onRequestGet({ params, env, request }) {
   if (!env.PAGEDROP_KV) {
@@ -11,7 +12,8 @@ export async function onRequestGet({ params, env, request }) {
   const id = params.id;
   const raw = await env.PAGEDROP_KV.get(id);
   if (!raw) {
-    return new Response("页面不存在或已过期 (404)", {
+    // id 不存在/已过期 → 渲染同款风格化 404 页（含 3 秒跳首页）
+    return new Response(NOT_FOUND_HTML, {
       status: 404,
       headers: { "content-type": "text/html; charset=utf-8" },
     });
