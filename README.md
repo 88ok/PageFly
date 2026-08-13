@@ -25,7 +25,8 @@ pagefly/
 │   └── v/[id].js            # GET：渲染“菜单 + iframe 预览”页
 ├── src/
 │   ├── upload.js            # 生成短 ID + 写入 KV（共享逻辑，含类型自动识别与标题抓取）
-│   └── render.js            # 渲染查看页（菜单 + iframe srcdoc；md 用 marked 渲染）
+│   ├── render.js            # 渲染查看页（菜单 + iframe srcdoc）
+│   └── markdown.js          # 内置轻量 Markdown → HTML 渲染器（零依赖）
 ├── dev-server.mjs           # 本地开发服务器（内存 KV，无需 wrangler）
 ├── wrangler.toml
 └── package.json
@@ -35,16 +36,15 @@ pagefly/
 - **存储**：Cloudflare KV。每条页面 = 一个 key（`{type, raw, title, createdAt}`）。
 - **HTML 模式**：用户 HTML 原样通过 `<iframe srcdoc="...">` 注入，与顶部菜单天然隔离；
   iframe 带 `sandbox="allow-scripts allow-same-origin ..."`，可运行 JS / 表单 / 弹窗，但不影响外层站点。
-- **Markdown 模式**：服务端用 `marked` 把 Markdown 渲染成 HTML 并套一套排版样式后注入 iframe；
+- **Markdown 模式**：服务端用内置轻量渲染器（`src/markdown.js`，零依赖）把 Markdown 渲染成 HTML 并套一套排版样式后注入 iframe；
   iframe 沙箱**关闭 allow-scripts**（`allow-popups allow-same-origin`），更安全——md 本不需要跑脚本。
 - **源码查看**：`/v/:id?raw=1` 直接返回原始内容（md 返回 `text/markdown`，html 返回 `text/html`，可下载、新标签打开）。
-- **依赖**：`marked`（Markdown 解析），由 Cloudflare Pages Functions 的 esbuild 打包，无需额外配置。
+- **依赖**：**无任何外部依赖**。Markdown 渲染为内置实现，`npm install` 已不需要，部署更快更稳。
 
 ## 本地开发（立刻能跑）
 
 ```bash
-npm install          # 安装依赖（marked）
-npm run dev          # 启动 http://localhost:8788
+npm run dev          # 启动 http://localhost:8788（无需 npm install，零依赖）
 ```
 
 打开 http://localhost:8788 → 拖入/粘贴 HTML 或 Markdown → 生成链接 → 打开 `/v/xxxx` 查看（格式自动识别）。

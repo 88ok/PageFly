@@ -1,7 +1,7 @@
 // 渲染“分享查看页”：顶部本站菜单 + 下方 iframe 预览。
 // - html 模式：用户 HTML 原样注入 iframe（srcdoc），沙箱允许脚本/表单。
-// - md 模式：用 marked 把 Markdown 转成 HTML 并套排版样式注入，沙箱更严格（不跑脚本）。
-import { marked } from "marked";
+// - md 模式：用内置轻量渲染器把 Markdown 转成 HTML 并套排版样式注入，沙箱更严格（不跑脚本）。
+import { renderMarkdown } from "./markdown.js";
 
 export function renderViewPage({ id, selfUrl, type = "html", raw = "", title = "" }) {
   const displayTitle = title?.trim?.() || id;
@@ -9,8 +9,8 @@ export function renderViewPage({ id, selfUrl, type = "html", raw = "", title = "
   let sandbox;
 
   if (type === "md") {
-    // Markdown → HTML（GFM 语法，表格/任务列表/删除线等）
-    const body = marked.parse(raw, { gfm: true, breaks: false });
+    // Markdown → HTML（内置轻量渲染器，零依赖）
+    const body = renderMarkdown(raw);
     contentHtml = renderMarkdownDocument(body);
     // md 不需要跑脚本，关掉 allow-scripts，比 html 视图更隔离
     sandbox = 'allow-popups allow-popups-to-escape-sandbox allow-same-origin';
