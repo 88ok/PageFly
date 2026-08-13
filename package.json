@@ -5,5 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node dev-server.mjs"
+  },
+  "dependencies": {
+    "marked": "^18.0.9"
   }
 }

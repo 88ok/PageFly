@@ -9,9 +9,14 @@ export function generateId(len = 8) {
   return s;
 }
 
-// 从 HTML 源码中提取 <title> 文本
-export function extractTitle(html) {
-  const m = String(html || "").match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+// 从原文中提取标题：md 取首行 # 标题，html 取 <title>
+export function extractTitle(raw, type) {
+  const text = String(raw || "");
+  if (type === "md") {
+    const m = text.match(/^\s*#\s+(.+?)\s*$/m);
+    return m ? m[1].trim() : "";
+  }
+  const m = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   if (!m) return "";
   return m[1]
     .replace(/<[^>]+>/g, " ")
@@ -19,12 +24,13 @@ export function extractTitle(html) {
     .trim();
 }
 
-// 把一页 HTML 存入 KV。key=短ID，value=JSON{html, title, createdAt}
-export async function savePage(env, html, title = "") {
+// 把一页内容存入 KV。key=短ID，value=JSON{type, raw, title, createdAt}
+export async function savePage(env, { type = "html", raw = "", title = "" }) {
   const id = generateId();
   const payload = {
-    html,
-    title: title?.trim?.() || extractTitle(html) || "未命名页面",
+    type,
+    raw,
+    title: title?.trim?.() || extractTitle(raw, type) || "未命名页面",
     createdAt: Date.now(),
   };
   await env.PAGEDROP_KV.put(id, JSON.stringify(payload));

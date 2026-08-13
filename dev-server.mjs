@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { extname, join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { savePage, extractTitle } from "./src/upload.js";
+import { savePage } from "./src/upload.js";
 import { renderViewPage } from "./src/render.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -30,20 +30,23 @@ const server = createServer(async (req, res) => {
   try {
     // 上传
     if (req.method === "POST" && u.pathname === "/api/upload") {
-      let html = "";
+      let content = "";
+      let type = "html";
       let title = "";
       const ct = req.headers["content-type"] || "";
       if (ct.includes("application/json")) {
         const body = await readJson(req);
-        html = body.html || "";
-        title = body.title || "";
+        content = body.content ?? body.html ?? "";
+        type = body.type === "md" ? "md" : "html";
+        title = body.title ?? "";
       } else {
         const form = await readForm(req);
-        html = form.get("html") || "";
-        title = form.get("title") || "";
+        content = form.get("content") ?? form.get("html") ?? "";
+        type = form.get("type") === "md" ? "md" : "html";
+        title = form.get("title") ?? "";
       }
-      if (!String(html).trim()) return json(res, 400, { error: "empty_html" });
-      const id = await savePage({ PAGEDROP_KV: kv }, String(html), String(title));
+      if (!String(content).trim()) return json(res, 400, { error: "empty_content" });
+      const id = await savePage({ PAGEDROP_KV: kv }, { type, raw: String(content), title: String(title) });
       return json(res, 200, { id, url: `${u.origin}/v/${id}` });
     }
 
@@ -53,13 +56,13 @@ const server = createServer(async (req, res) => {
       const raw = await kv.get(id);
       if (!raw) { res.writeHead(404, { "content-type": "text/html; charset=utf-8" }); return res.end("404 Not Found"); }
       const parsed = JSON.parse(raw);
-      const html = parsed.html;
-      const title = parsed.title || extractTitle(html) || "";
+      const { type = "html", raw: content = "", title = "" } = parsed;
       if (u.searchParams.get("raw") !== null) {
-        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-        return res.end(html);
+        const ct = type === "md" ? "text/markdown; charset=utf-8" : "text/html; charset=utf-8";
+        res.writeHead(200, { "content-type": ct });
+        return res.end(content);
       }
-      const page = renderViewPage({ id, selfUrl: `${u.origin}/v/${id}`, html, title });
+      const page = renderViewPage({ id, selfUrl: `${u.origin}/v/${id}`, type, raw: content, title });
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       return res.end(page);
     }

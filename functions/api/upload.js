@@ -12,28 +12,32 @@ export async function onRequestPost({ request, env }) {
   }
 
   const contentType = request.headers.get("content-type") || "";
-  let html;
+  let content = "";
+  let type = "html";
   let title = "";
   try {
     if (contentType.includes("application/json")) {
       const data = await request.json();
-      html = data?.html ?? "";
+      // 兼容旧字段 html
+      content = data?.content ?? data?.html ?? "";
+      type = data?.type === "md" ? "md" : "html";
       title = data?.title ?? "";
     } else {
       const form = await request.formData();
-      html = form.get("html") ?? "";
+      content = form.get("content") ?? form.get("html") ?? "";
+      type = form.get("type") === "md" ? "md" : "html";
       title = form.get("title") ?? "";
     }
   } catch (e) {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
 
-  html = String(html || "");
-  if (!html.trim()) {
-    return Response.json({ error: "empty_html" }, { status: 400 });
+  content = String(content || "");
+  if (!content.trim()) {
+    return Response.json({ error: "empty_content" }, { status: 400 });
   }
 
-  const id = await savePage(env, html, title);
+  const id = await savePage(env, { type, raw: content, title });
   const base = new URL(request.url).origin;
   return Response.json({ id, url: `${base}/v/${id}` });
 }

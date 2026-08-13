@@ -1,10 +1,28 @@
 // 渲染“分享查看页”：顶部本站菜单 + 下方 iframe 预览。
-// 上传的 HTML 通过 iframe 的 srcdoc 注入，天然与菜单隔离（沙箱）。
-export function renderViewPage({ id, selfUrl, html, title = "" }) {
-  // 把 HTML 序列化为 JS 字符串，并把 "<" 转义为 \u003c，
-  // 防止内容里的 </script> 提前闭合本页 script。
-  const safe = JSON.stringify(html).replace(/</g, "\\u003c");
+// - html 模式：用户 HTML 原样注入 iframe（srcdoc），沙箱允许脚本/表单。
+// - md 模式：用 marked 把 Markdown 转成 HTML 并套排版样式注入，沙箱更严格（不跑脚本）。
+import { marked } from "marked";
+
+export function renderViewPage({ id, selfUrl, type = "html", raw = "", title = "" }) {
   const displayTitle = title?.trim?.() || id;
+  let contentHtml;
+  let sandbox;
+
+  if (type === "md") {
+    // Markdown → HTML（GFM 语法，表格/任务列表/删除线等）
+    const body = marked.parse(raw, { gfm: true, breaks: false });
+    contentHtml = renderMarkdownDocument(body);
+    // md 不需要跑脚本，关掉 allow-scripts，比 html 视图更隔离
+    sandbox = 'allow-popups allow-popups-to-escape-sandbox allow-same-origin';
+  } else {
+    contentHtml = raw;
+    sandbox =
+      "allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-popups-to-escape-sandbox";
+  }
+
+  // 把内容序列化为 JS 字符串，并把 "<" 转义为 \u003c，
+  // 防止内容里的 </script> 提前闭合本页 script。
+  const safe = JSON.stringify(contentHtml).replace(/</g, "\\u003c");
 
   return `<!doctype html>
 <html lang="zh-CN">
@@ -45,7 +63,7 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Seg
   <a class="btn primary" href="/">＋ 创建页面</a>
   <button class="btn" id="copyBtn">复制链接</button>
 </header>
-<iframe id="f" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-popups-to-escape-sandbox"></iframe>
+<iframe id="f" sandbox="${sandbox}"></iframe>
 <script>
   var html = ${safe};
   document.getElementById('f').srcdoc = html;
@@ -58,6 +76,41 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Seg
 </script>
 </body>
 </html>`;
+}
+
+// 把 marked 生成的 HTML 包成一份带排版的完整文档（注入 iframe srcdoc）
+function renderMarkdownDocument(bodyHtml) {
+  const css = `
+:root{
+  --md-text:#1f2328;--md-muted:#656d76;--md-line:#d0d7de;--md-bg:#fff;
+  --md-code-bg:#f6f8fa;--md-brand:#6366f1;
+}
+*{box-sizing:border-box;}
+body{margin:0;padding:48px 24px;background:var(--md-bg);color:var(--md-text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased;}
+.md{max-width:780px;margin:0 auto;}
+h1,h2,h3,h4,h5,h6{line-height:1.3;margin:1.6em 0 .6em;font-weight:700;}
+h1{font-size:2em;border-bottom:1px solid var(--md-line);padding-bottom:.3em;}
+h2{font-size:1.5em;border-bottom:1px solid var(--md-line);padding-bottom:.3em;}
+h3{font-size:1.25em;}
+p{margin:.9em 0;}
+a{color:var(--md-brand);text-decoration:none;}
+a:hover{text-decoration:underline;}
+ul,ol{padding-left:1.6em;margin:.8em 0;}
+li{margin:.3em 0;}
+blockquote{margin:.9em 0;padding:.4em 1em;border-left:4px solid var(--md-line);color:var(--md-muted);background:#fafbfc;}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;
+  background:var(--md-code-bg);padding:.2em .4em;border-radius:6px;}
+pre{background:var(--md-code-bg);padding:16px;border-radius:10px;overflow:auto;margin:.9em 0;}
+pre code{background:transparent;padding:0;font-size:.88em;line-height:1.6;}
+img{max-width:100%;border-radius:8px;margin:.4em 0;}
+hr{border:0;border-top:1px solid var(--md-line);margin:1.8em 0;}
+table{border-collapse:collapse;margin:1em 0;width:100%;}
+th,td{border:1px solid var(--md-line);padding:8px 12px;text-align:left;}
+th{background:var(--md-code-bg);font-weight:600;}
+`;
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body><div class="md">${bodyHtml}</div></body></html>`;
 }
 
 function escapeHtml(str) {

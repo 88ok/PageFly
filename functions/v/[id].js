@@ -1,5 +1,4 @@
 import { renderViewPage } from "../../src/render.js";
-import { extractTitle } from "../../src/upload.js";
 
 export async function onRequestGet({ params, env, request }) {
   if (!env.PAGEDROP_KV) {
@@ -18,26 +17,27 @@ export async function onRequestGet({ params, env, request }) {
     });
   }
 
-  let html;
-  let title = "";
+  let parsed;
   try {
-    const parsed = JSON.parse(raw);
-    html = parsed.html;
-    title = parsed.title || extractTitle(html) || "";
+    parsed = JSON.parse(raw);
   } catch (e) {
     return new Response("数据损坏", { status: 500 });
   }
 
+  const { type = "html", raw: content = "", title = "" } = parsed;
+
   const url = new URL(request.url);
-  // ?raw=1 → 直接返回源码（可下载/查看）
+  // ?raw=1 → 直接返回源码（md 返回 text/markdown，html 返回 text/html，可下载/查看）
   if (url.searchParams.get("raw") !== null) {
-    return new Response(html, {
-      headers: { "content-type": "text/html; charset=utf-8" },
-    });
+    const ct =
+      type === "md"
+        ? "text/markdown; charset=utf-8"
+        : "text/html; charset=utf-8";
+    return new Response(content, { headers: { "content-type": ct } });
   }
 
   const selfUrl = `${url.origin}/v/${id}`;
-  return new Response(renderViewPage({ id, selfUrl, html, title }), {
+  return new Response(renderViewPage({ id, selfUrl, type, raw: content, title }), {
     headers: { "content-type": "text/html; charset=utf-8" },
   });
 }

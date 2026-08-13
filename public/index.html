@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>PageFly · 部署自定义 HTML 页面的最简方式</title>
-<meta name="description" content="PageFly —— 为静态内容而生的极简托管页。一次上传，随处访问。" />
+<title>PageFly · 部署 HTML 与 Markdown 的最简方式</title>
+<meta name="description" content="PageFly —— 为静态内容而生的极简托管页，支持 HTML 与 Markdown。一次上传，随处访问。" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="icon" href="/favicon.ico" sizes="32x32" />
 <link rel="apple-touch-icon" href="/favicon.svg" />
@@ -44,9 +44,6 @@
   .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:.2px;text-decoration:none;color:var(--ink);}
   .brand .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--brand-2));display:grid;place-items:center;box-shadow:var(--shadow-sm);}
   .brand .mark svg{width:17px;height:17px;color:#fff;}
-  .nav-links{display:flex;align-items:center;gap:18px;font-size:14px;}
-  .nav-links a{color:var(--muted);text-decoration:none;transition:color .15s;}
-  .nav-links a:hover{color:var(--ink);}
 
   /* hero */
   header.hero{padding:28px 0 14px;text-align:center;}
@@ -59,10 +56,19 @@
   /* publish card */
   .card{margin:22px auto 0;max-width:760px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;text-align:left;}
   .card-body{padding:24px;}
-  .field{margin-bottom:18px;}
+  .field{margin-bottom:16px;}
   .field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;}
   .field input.title{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--ink);background:#fbfbfe;outline:0;transition:.15s;}
   .field input.title:focus{border-color:var(--brand);background:#fff;}
+
+  /* format segment */
+  .fmt-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .fmt-label{font-size:13px;font-weight:600;color:var(--muted);}
+  .seg{display:inline-flex;background:#eef0f6;border:1px solid var(--line);border-radius:10px;padding:3px;}
+  .seg-btn{border:0;background:transparent;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);padding:7px 18px;border-radius:8px;transition:.15s;}
+  .seg-btn.active{background:#fff;color:var(--brand-ink);box-shadow:var(--shadow-sm);}
+  .fmt-hint{font-size:12.5px;color:var(--muted);margin-left:auto;}
+  @media(max-width:720px){.fmt-hint{display:none;}}
 
   /* upload / paste area */
   .area{border:1.5px dashed #d1d5db;border-radius:16px;background:#fff;overflow:hidden;transition:.18s;}
@@ -143,8 +149,8 @@
     </nav>
 
     <header class="hero">
-      <span class="eyebrow"><span class="dot"></span>为静态内容而生的 · 极简 · 托管页</span>
-      <h1>部署自定义 HTML 页面<br>的<span class="grad">最简方式</span></h1>
+      <span class="eyebrow"><span class="dot"></span>为 HTML 与 Markdown 而生的 · 极简 · 托管页</span>
+      <h1>部署你的 HTML 与 Markdown<br>的<span class="grad">最简方式</span></h1>
       <p class="sub">一次上传，随处访问。</p>
 
       <div class="card">
@@ -154,16 +160,25 @@
             <input type="text" id="pageTitle" class="title" placeholder="例如：我的产品落地页" />
           </div>
 
+          <div class="fmt-row">
+            <span class="fmt-label">格式</span>
+            <div class="seg" id="fmtSeg">
+              <button type="button" class="seg-btn active" data-fmt="html">HTML</button>
+              <button type="button" class="seg-btn" data-fmt="md">Markdown</button>
+            </div>
+            <span class="fmt-hint" id="fmtHint">完整网页 · 支持 JS</span>
+          </div>
+
           <div class="area" id="area">
             <div class="upload-zone" id="uploadZone">
               <div class="ic">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M4 20h16"/></svg>
               </div>
-              <h3>点击上传 HTML</h3>
-              <p>支持拖拽 .html 文件至此处</p>
+              <h3 id="uploadZoneH3">点击上传 HTML</h3>
+              <p id="uploadZoneP">支持拖拽 .html 文件至此处</p>
               <button class="btn-orange" id="pickBtn" type="button">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                点击选择本地 HTML 文件
+                <span id="pickLabel">点击选择本地 HTML 文件</span>
               </button>
               <div class="file-hint" id="fileHint"></div>
             </div>
@@ -194,13 +209,13 @@
       </div>
       <div class="feat">
         <div class="fi"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
-        <h3>一次上传，永久在线</h3>
+        <h3>HTML · Markdown 一键托管</h3>
         <p>免服务器、免构建，纯静态托管，链接长期有效。</p>
       </div>
       <div class="feat">
         <div class="fi"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg></div>
         <h3>链接即分享</h3>
-        <p>自动生成专属链接，复制即可发给任何人，随处打开。</p>
+        <p>自动生成专属链接，Markdown 自动渲染排版，复制即可发给任何人。</p>
       </div>
     </section>
 
@@ -228,7 +243,7 @@
         </a>
         <button class="ghost" id="resultAgain" type="button">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          继续上传另一个 HTML
+          继续上传
         </button>
       </div>
     </div>
@@ -239,6 +254,7 @@
 
   const state = {
     mode: 'upload', // 'upload' | 'paste'
+    type: 'html',  // 'html' | 'md'
     html: '',
     title: '',
   };
@@ -246,6 +262,8 @@
   const els = {
     area: $('area'),
     uploadZone: $('uploadZone'),
+    uploadZoneH3: $('uploadZoneH3'),
+    uploadZoneP: $('uploadZoneP'),
     pasteZone: $('pasteZone'),
     code: $('code'),
     pageTitle: $('pageTitle'),
@@ -254,6 +272,9 @@
     modeLabel: $('modeLabel'),
     publishBtn: $('publishBtn'),
     pickBtn: $('pickBtn'),
+    pickLabel: $('pickLabel'),
+    fmtSeg: $('fmtSeg'),
+    fmtHint: $('fmtHint'),
     modal: $('modal'),
     resultUrl: $('resultUrl'),
     resultCopy: $('resultCopy'),
@@ -263,7 +284,8 @@
 
   // 文件选择
   const fileInput = document.createElement('input');
-  fileInput.type = 'file'; fileInput.accept = '.html,text/html';
+  fileInput.type = 'file';
+  fileInput.accept = '.html,text/html';
   els.pickBtn.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', () => readFile(fileInput.files[0]));
 
@@ -281,13 +303,17 @@
     const text = await f.text();
     state.html = text;
     els.fileHint.innerHTML = '已选择文件：<b>' + escapeHtml(f.name) + '</b>，点击「确认发布」即可生成链接';
-    // 如果标题为空且 HTML 里有 title，自动填上
-    const t = extractTitle(text);
+    // 标题为空时按格式自动抓取
+    const t = extractTitle(text, state.type);
     if (!els.pageTitle.value.trim() && t) els.pageTitle.value = t;
   }
 
-  function extractTitle(html){
-    const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  function extractTitle(text, type){
+    if (type === 'md') {
+      const m = String(text).match(/^\s*#\s+(.+?)\s*$/m);
+      return m ? m[1].trim() : '';
+    }
+    const m = String(text).match(/<title[^>]*>([\s\S]*?)<\/title>/i);
     if (!m) return '';
     return m[1].replace(/<[^>]+>/g, ' ').replace(/[\s\r\n]+/g, ' ').trim();
   }
@@ -296,13 +322,34 @@
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  // 切换模式
+  // 格式切换：HTML / Markdown
+  function applyFmt(){
+    const md = state.type === 'md';
+    fileInput.accept = md ? '.md,.markdown,.txt,text/markdown' : '.html,text/html';
+    els.uploadZoneH3.textContent = md ? '点击上传 Markdown' : '点击上传 HTML';
+    els.uploadZoneP.textContent = md ? '支持拖拽 .md / .markdown 文件至此处' : '支持拖拽 .html 文件至此处';
+    els.pickLabel.textContent = md ? '点击选择本地 Markdown 文件' : '点击选择本地 HTML 文件';
+    els.fmtHint.textContent = md ? '自动渲染排版 · 更隔离' : '完整网页 · 支持 JS';
+    els.code.placeholder = md
+      ? '# 在这里写 Markdown\n\n支持 **加粗**、*斜体*、列表、> 引用、`代码`、[链接](url)…'
+      : '<!-- 在此粘贴你的 HTML 代码 -->\n<h1>Hello PageFly</h1>';
+  }
+
+  els.fmtSeg.querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.type = btn.dataset.fmt;
+      els.fmtSeg.querySelectorAll('.seg-btn').forEach(x => x.classList.toggle('active', x === btn));
+      applyFmt();
+    });
+  });
+
+  // 切换 上传/粘贴 模式
   function setMode(mode){
     state.mode = mode;
     els.area.classList.toggle('paste', mode === 'paste');
     els.modeLabel.textContent = mode === 'upload'
-      ? '切换为直接粘贴 HTML 代码'
-      : '切换为上传本地 HTML 文件';
+      ? (state.type === 'md' ? '切换为直接粘贴 Markdown 代码' : '切换为直接粘贴 HTML 代码')
+      : (state.type === 'md' ? '切换为上传本地 Markdown 文件' : '切换为上传本地 HTML 文件');
     if (mode === 'paste') {
       setTimeout(() => els.code.focus(), 50);
     }
@@ -313,14 +360,14 @@
   // 粘贴区输入变化
   els.code.addEventListener('input', () => {
     state.html = els.code.value;
-    const t = extractTitle(state.html);
+    const t = extractTitle(state.html, state.type);
     if (!els.pageTitle.value.trim() && t) els.pageTitle.value = t;
   });
 
   // 发布
   async function publish(){
-    const html = state.mode === 'paste' ? els.code.value : state.html;
-    if (!html.trim()) { alert('请先粘贴 HTML 或选择文件'); return; }
+    const content = state.mode === 'paste' ? els.code.value : state.html;
+    if (!content.trim()) { alert(state.type === 'md' ? '请先粘贴 Markdown 或选择文件' : '请先粘贴 HTML 或选择文件'); return; }
 
     const title = els.pageTitle.value.trim();
     els.publishBtn.disabled = true; els.publishBtn.textContent = '发布中…';
@@ -328,7 +375,7 @@
       const res = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ html, title })
+        body: JSON.stringify({ content, type: state.type, title })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'error');
@@ -367,6 +414,9 @@
   els.modal.addEventListener('click', (e) => {
     if (e.target === els.modal) els.resultAgain.click();
   });
+
+  // 初始化格式相关文案
+  applyFmt();
 </script>
 </body>
 </html>
