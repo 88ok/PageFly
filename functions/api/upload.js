@@ -1,6 +1,17 @@
 import { savePage } from "../../src/upload.js";
 
 export async function onRequestPost({ request, env }) {
+  // KV 未绑定时的明确报错（Pages 通过 git 部署时绑定需在控制台配置）
+  if (!env.PAGEDROP_KV) {
+    return Response.json(
+      {
+        error: "kv_not_bound",
+        hint: "请在 Cloudflare Pages 控制台 → Settings → Functions → KV namespace bindings 添加绑定：变量名填 PAGEDROP_KV，指向你的 KV 命名空间。",
+      },
+      { status: 500 }
+    );
+  }
+
   const contentType = request.headers.get("content-type") || "";
   let html;
   try {
