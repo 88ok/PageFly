@@ -12,7 +12,7 @@ export const NOT_FOUND_HTML = `<!doctype html>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="icon" href="/favicon.ico" sizes="32x32" />
 <link rel="apple-touch-icon" href="/favicon.svg" />
-<meta http-equiv="refresh" content="3; url=/" />
+<meta http-equiv="refresh" content="5; url=/" />
 <style>
   :root{
     --bg:#f6f7fb;--panel:#ffffff;--ink:#0f172a;--muted:#64748b;--line:#e7e9f0;
@@ -64,7 +64,7 @@ export const NOT_FOUND_HTML = `<!doctype html>
         <span class="eyebrow"><span class="dot"></span>页面未找到</span>
         <h1>你访问的页面走丢了</h1>
         <p class="sub">链接可能已失效，或页面从未存在。别担心，我们带你回到首页。</p>
-        <div class="countdown"><span>将在</span><b id="cd">3</b><span>秒后自动返回首页</span></div>
+        <div class="countdown"><span>将在</span><b id="cd">5</b><span>秒后自动返回首页</span></div>
         <div class="actions">
           <a class="btn-primary" href="/"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>立即返回首页</a>
           <a class="btn-ghost" href="/"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m5 12 7 7 7-7"/></svg>去创建一个页面</a>
@@ -74,7 +74,7 @@ export const NOT_FOUND_HTML = `<!doctype html>
     <footer>© 2026 PageFly 页面托管 &nbsp;·&nbsp; 为 HTML 与 Markdown 而生</footer>
   </div>
 <script>
-  let n = 3;const cd = document.getElementById('cd');
+  let n = 5;const cd = document.getElementById('cd');
   const iv = setInterval(function(){ n--; if (n <= 0){ clearInterval(iv); location.href = '/'; return; } if (cd) cd.textContent = n; }, 1000);
 </script>
 </body>

@@ -9,7 +9,7 @@
 <link rel="icon" href="/favicon.ico" sizes="32x32" />
 <link rel="apple-touch-icon" href="/favicon.svg" />
 <!-- 无 JS 时的兜底跳转 -->
-<meta http-equiv="refresh" content="3; url=/" />
+<meta http-equiv="refresh" content="5; url=/" />
 <style>
   :root{
     --bg:#f6f7fb;
@@ -89,7 +89,7 @@
         <h1>你访问的页面走丢了</h1>
         <p class="sub">链接可能已失效，或页面从未存在。别担心，我们带你回到首页。</p>
 
-        <div class="countdown"><span>将在</span><b id="cd">3</b><span>秒后自动返回首页</span></div>
+        <div class="countdown"><span>将在</span><b id="cd">5</b><span>秒后自动返回首页</span></div>
 
         <div class="actions">
           <a class="btn-primary" href="/">
@@ -110,8 +110,8 @@
   </div>
 
 <script>
-  // 3 秒倒计时后跳转首页（meta refresh 为无 JS 兜底）
-  let n = 3;
+  // 5 秒倒计时后跳转首页（meta refresh 为无 JS 兜底）
+  let n = 5;
   const cd = document.getElementById('cd');
   const iv = setInterval(function () {
     n--;

@@ -19,18 +19,32 @@
 
 ```
 pagefly/
-├── public/index.html        # 主页：上传 UI（拖拽 / 选文件 / 粘贴 → 生成链接；格式自动识别）
+├── public/
+│   ├── index.html           # 主页：上传 UI（拖拽 / 选文件 / 粘贴 → 生成链接；格式自动识别）
+│   ├── 404.html             # 风格化 404 页（5 秒自动跳回首页）
+│   └── dash.html            # 管理后台 UI（密码登录 + 页面列表 / 编辑 / 删除 / 改 ID）
 ├── functions/
 │   ├── api/upload.js        # POST：存内容到 KV，返回 {id, url}（type 缺省时按内容自动识别 html|md）
-│   └── v/[id].js            # GET：渲染“菜单 + iframe 预览”页
+│   ├── v/[id].js            # GET：渲染“菜单 + iframe 预览”页；id 不存在则返回同款 404
+│   └── api/dash/            # 管理后台 API（均需密码校验）
+│       ├── login.js         # POST：校验 PASSWORD，下发 httpOnly 会话 Cookie
+│       ├── logout.js        # POST：注销（使 Cookie 失效）
+│       ├── pages.js         # GET：列出全部已发布页面（元数据）
+│       ├── get.js           # GET：读取单页完整内容（用于编辑）
+│       ├── delete.js        # POST：删除指定 id
+│       └── update.js        # POST：修改内容 / 类型 / id（改 id 会复制并删旧 key）
 ├── src/
 │   ├── upload.js            # 生成短 ID + 写入 KV（共享逻辑，含类型自动识别与标题抓取）
 │   ├── render.js            # 渲染查看页（菜单 + iframe srcdoc）
-│   └── markdown.js          # 内置轻量 Markdown → HTML 渲染器（零依赖）
+│   ├── markdown.js          # 内置轻量 Markdown → HTML 渲染器（零依赖）
+│   ├── errorPage.js         # 404 页 HTML（单一来源，供 /v/<无效id> 复用）
+│   └── auth.js             # 管理后台鉴权（PASSWORD 校验 + httpOnly Cookie 会话）
 ├── dev-server.mjs           # 本地开发服务器（内存 KV，无需 wrangler）
-├── wrangler.toml
 └── package.json
 ```
+
+> 仓库**不含 `wrangler.toml`**：项目以「控制台管理（dashboard-managed）」模式部署，绑定与
+> 环境变量都在 Cloudflare 控制台配置，避免把 KV id 写进公开仓库。
 
 - **格式自动识别**：上传时不让用户选择格式。服务端 `detectType()` **Markdown 特征优先**（`# 标题`、`- 列表`、`**粗体**`、反引号代码、`[链接]`、引用、`~~删除线~~` 等）；只有明确以 `<!doctype html>` / `<html` 开头，或明显是 HTML 标签（且不是注释 `<!--`、自动链接 `<https://>`）才判为 HTML。首页也会在发布按钮旁实时显示「自动识别：Markdown / HTML」，误判一目了然。Markdown 自动渲染成排版网页，且沙箱更隔离（不执行脚本）。
 - **存储**：Cloudflare KV。每条页面 = 一个 key（`{type, raw, title, createdAt}`）。
@@ -75,6 +89,35 @@ PAGEDROP_KV_ID=你的命名空间ID wrangler pages deploy public
 
 开发期可用 `.dev.vars` 写一行 `PAGEDROP_KV_ID=xxx`（已在 `.gitignore` 中，不会提交）。
 注意：一旦用本文件部署，KV 绑定以 `wrangler.toml` 为准，控制台同名绑定编辑会被忽略。
+（本项目当前采用「控制台管理」模式，无需 `wrangler.toml`，详见上方架构说明。）
+
+### 配置管理密码（启用 `/dash` 后台）
+
+管理后台 `/dash` 用**单一密码**保护，密码由 Pages 环境变量 `PASSWORD` 提供（无用户名）：
+
+1. **Workers & Pages → 你的 Pages 项目 → Settings → Environment variables**（环境变量）。
+2. 添加变量：**Variable name = `PASSWORD`**，值填你的管理密码；作用域勾选 **Production**
+   （如需预览环境也能进后台，另加一份 Production/Preview 同值）。若界面提供 “Secret / 加密” 选项可一并勾选。
+3. **Save** 后**重新部署一次**（Deployments → Redeploy），变量才会注入运行时。
+4. 访问 `https://你的项目.pages.dev/dash` → 输入密码进入。
+
+> 未配置 `PASSWORD` 时，后台登录会提示「服务端未配置 PASSWORD」；此时所有 `/api/dash/*`
+> 接口均拒绝访问。会话以 httpOnly Cookie 持有「密码的 SHA-256 摘要」，服务端每次请求重算比对，
+> 明文密码不写入 Cookie。
+
+## 管理后台 `/dash`
+
+访问 `/dash` 进入管理界面（需先配好 `PASSWORD`）：
+
+- **页面列表**：展示全部已发布页面（标题、类型徽标、ID、创建时间），最新在前。
+- **预览**：新标签打开 `/v/<id>` 查看真实效果。
+- **复制链接**：一键复制分享链接。
+- **编辑**：修改内容（HTML / Markdown 源码）与类型；可顺带**修改 ID**（留空保持不变，
+  改后旧链接失效、新链接生效，且会校验新 ID 未被占用，避免覆盖）。
+- **删除**：二次确认后从 KV 移除，不可恢复。
+
+> 本地开发（`npm run dev`）时，可用 `PASSWORD=你的密码 npm run dev` 启动以启用后台；
+> 不传 `PASSWORD` 则后台接口返回「未配置 PASSWORD」，这是有意为之（防止忘记设密码时后台裸奔）。
 
 > Pages 默认运行在 Cloudflare 边缘网络；可在 **Speed / Caching** 中开启缓存，
 > `/v/:id` 为静态化内容，适合边缘缓存加速。
