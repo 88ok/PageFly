@@ -9,6 +9,20 @@ export function generateId(len = 8) {
   return s;
 }
 
+// 明显的 Markdown 语法特征（优先于 HTML 判断）
+const MD_MARKERS = [
+  /^\s*#{1,6}\s+\S/m,               // # 标题
+  /\*\*[^\s*].*?\*\*/,              // **bold**
+  /(^|\n)\s*>\s+\S/m,               // > quote
+  /(^|\n)\s*-\s+\S/m,               // - list
+  /(^|\n)\s*\*\s+\S/m,              // * list
+  /(^|\n)\s*\d+\.\s+\S/m,           // 1. list
+  /`[^`]+`/,                         // inline code
+  /!\[.*?\]\(.*?\)/,                // image
+  /\[.*?\]\(.*?\)/,                 // link
+  /(^|\n)\s*```[\s\S]*?```/m,        // fenced code block
+];
+
 // 从原文中提取标题：md 取首行 # 标题，html 取 <title>
 export function extractTitle(raw, type) {
   const text = String(raw || "");
@@ -24,13 +38,21 @@ export function extractTitle(raw, type) {
     .trim();
 }
 
-// 自动判断内容类型：以 < 标签 / <!doctype html> 开头视为 HTML，其余按 Markdown 渲染。
+// 自动判断内容类型：
+// - 以 <!doctype html> / <html 开头 → HTML
+// - 否则若含明显 Markdown 语法特征 → Markdown（沙箱更隔离）
+// - 其余再判断是否以普通 HTML 标签开头 → HTML
+// - 默认按 Markdown 渲染
 export function detectType(content) {
   const s = String(content || "").trim();
   if (!s) return "md";
   if (/^<!doctype\s+html/i.test(s)) return "html";
-  if (/^<[a-z!]/i.test(s)) return "html"; // 以标签开头 → 视为 HTML 片段/文档
-  return "md"; // 普通文本 / Markdown（沙箱更隔离，无脚本执行）
+  if (/^<html\b/i.test(s)) return "html";
+  for (const re of MD_MARKERS) {
+    if (re.test(s)) return "md";
+  }
+  if (/^<[a-z!]/i.test(s)) return "html";
+  return "md";
 }
 
 // 把一页内容存入 KV。key=短ID，value=JSON{type, raw, title, createdAt}

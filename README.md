@@ -31,7 +31,7 @@ pagefly/
 └── package.json
 ```
 
-- **格式自动识别**：上传时不让用户选择格式。服务端 `detectType()` 按内容判定——以 `<` 标签 / `<!doctype html>` 开头视为 HTML，其余按 Markdown 渲染（Markdown 沙箱更隔离，无脚本执行）。
+- **格式自动识别**：上传时不让用户选择格式。服务端 `detectType()` 优先识别 Markdown 特征（`# 标题`、`- 列表`、`**粗体**`、反引号代码、`[链接]` 等）；只有明确以 `<!doctype html>` 或 `<html` 开头才判为 HTML。Markdown 会自动渲染成排版网页，且沙箱更隔离（不执行脚本）。
 - **存储**：Cloudflare KV。每条页面 = 一个 key（`{type, raw, title, createdAt}`）。
 - **HTML 模式**：用户 HTML 原样通过 `<iframe srcdoc="...">` 注入，与顶部菜单天然隔离；
   iframe 带 `sandbox="allow-scripts allow-same-origin ..."`，可运行 JS / 表单 / 弹窗，但不影响外层站点。
