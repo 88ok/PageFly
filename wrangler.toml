@@ -10,6 +10,6 @@ pages_build_output_dir = "public"
 #
 # 注：Cloudflare Pages 的 KV 绑定建议在控制台配置；
 # 若使用 wrangler 部署，也可在此声明（id 填你的 KV namespace id）：
-# [[kv_namespaces]]
-# binding = "PAGEDROP_KV"
-# id = "REPLACE_WITH_YOUR_KV_ID"
+[[kv_namespaces]]
+binding = "PAGEDROP_KV"
+id = "PAGEDROP_KV"
