@@ -12,4 +12,4 @@ pages_build_output_dir = "public"
 # 若使用 wrangler 部署，也可在此声明（id 填你的 KV namespace id）：
 [[kv_namespaces]]
 binding = "PAGEDROP_KV"
-id = "PAGEDROP_KV"
+id = "6f81dc51ac6b4c0ab7ad1ca173eb640e"
