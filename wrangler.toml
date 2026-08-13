@@ -14,3 +14,6 @@ pages_build_output_dir = "public"
 #   id = "<你的 KV 命名空间 ID>"
 # （该 ID 为账号专属，勿提交进开源仓库）
 # ─────────────────────────────────────────────────────────────
+[[kv_namespaces]]
+binding = "PAGEDROP_KV"
+id = "6f81dc51ac6b4c0ab7ad1ca173eb640e"
