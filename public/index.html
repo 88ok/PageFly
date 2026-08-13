@@ -137,10 +137,6 @@
         </span>
         PageFly
       </a>
-      <div class="nav-links">
-        <a href="#how">怎么用</a>
-        <a href="#" id="sampleBtn">试试示例</a>
-      </div>
     </nav>
 
     <header class="hero">
@@ -187,26 +183,26 @@
       </div>
     </header>
 
-    <section class="features" id="how">
-      <div class="feat">
-        <div class="fi"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
-        <h3>极简，无需构建</h3>
-        <p>没有框架、没有打包步骤。上传即托管，链接立等可取。</p>
-      </div>
+    <section class="features">
       <div class="feat">
         <div class="fi"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
-        <h3>随处访问</h3>
-        <p>运行在 Cloudflare 边缘网络，全球低延迟，随时可分享、可嵌入。</p>
+        <h3>全球 CDN 加速访问</h3>
+        <p>依托 Cloudflare 边缘网络，访客就近接入，全球秒级打开。</p>
       </div>
       <div class="feat">
-        <div class="fi"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-        <h3>安全隔离</h3>
-        <p>预览页采用 iframe 沙箱渲染，与站点菜单天然隔离，互不干扰。</p>
+        <div class="fi"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+        <h3>一次上传，永久在线</h3>
+        <p>免服务器、免构建，纯静态托管，链接长期有效。</p>
+      </div>
+      <div class="feat">
+        <div class="fi"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg></div>
+        <h3>链接即分享</h3>
+        <p>自动生成专属链接，复制即可发给任何人，随处打开。</p>
       </div>
     </section>
 
     <footer>
-      PageFly · 为静态内容而生 &nbsp;·&nbsp; <a href="/">上传一个页面试试 →</a>
+      © 2026 PageFly 页面托管 &nbsp;·&nbsp; <a href="/">上传一个页面试试 →</a>
     </footer>
   </div>
 
@@ -316,16 +312,6 @@
     state.html = els.code.value;
     const t = extractTitle(state.html);
     if (!els.pageTitle.value.trim() && t) els.pageTitle.value = t;
-  });
-
-  // 示例
-  $('sampleBtn').addEventListener('click', (e) => {
-    e.preventDefault();
-    setMode('paste');
-    const sample = '<!doctype html><html><head><meta charset="utf-8"><title>PageFly 示例</title><style>body{font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}h1{font-size:42px}</style></head><body><h1>Hello PageFly ✈</h1></body></html>';
-    els.code.value = sample;
-    state.html = sample;
-    els.pageTitle.value = 'PageFly 示例';
   });
 
   // 发布

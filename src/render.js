@@ -22,8 +22,9 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Seg
 .brand .mark svg{width:14px;height:14px;color:#fff;}
 .brand b{color:var(--text);white-space:nowrap;}
 .brand small{color:var(--muted);font-weight:500;font-size:12px;margin-left:2px;white-space:nowrap;}
-.brand .title{color:var(--text);font-weight:600;font-size:13px;margin-left:10px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;}
-@media(max-width:640px){.brand .title{display:none;}}
+.vtitle{flex:1;min-width:0;padding:0 12px;text-align:center;color:var(--text);font-weight:600;font-size:14px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;}
+.vtitle:hover{color:var(--brand);}
+@media(max-width:640px){.vtitle{display:none;}}
 .spacer{flex:1;}
 .btn{border:1px solid var(--border);background:#fff;color:var(--text);font-size:13px;padding:7px 12px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:.15s;white-space:nowrap;}
 .btn:hover{border-color:var(--brand);color:var(--brand);}
@@ -37,12 +38,10 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Seg
   <a class="brand" href="/">
     <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg></span>
     <b>PageFly</b><small>· 静态托管</small>
-    <span class="title">${escapeHtml(displayTitle)}</span>
   </a>
-  <div class="spacer"></div>
-  <a class="btn primary" href="/">＋ 创建共享页面</a>
+  <a class="vtitle" href="${selfUrl}?raw=1" target="_blank" rel="noopener" title="在新标签页打开">${escapeHtml(displayTitle)}</a>
+  <a class="btn primary" href="/">＋ 创建页面</a>
   <button class="btn" id="copyBtn">复制链接</button>
-  <a class="btn" href="${selfUrl}?raw=1" target="_blank" rel="noopener">新标签打开</a>
 </header>
 <iframe id="f" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-popups-to-escape-sandbox"></iframe>
 <script>
