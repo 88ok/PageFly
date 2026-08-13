@@ -11,6 +11,8 @@ export function renderViewPage({ id, selfUrl, html, title = "" }) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
 <title>${escapeHtml(displayTitle)} · PageFly</title>
 <style>
 :root{--bar-h:52px;--brand:#6366f1;--brand-2:#8b5cf6;--bg:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280;}
