@@ -1,0 +1,15 @@
+name = "pagefly"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "public"
+
+# 部署到 Cloudflare Pages 前：
+# 1) 在 Cloudflare 控制台创建一个 KV 命名空间（如 pagedrop-pages）
+# 2) 在本项目的 Settings → Functions → KV namespace bindings 里
+#    添加一个绑定，变量名（binding）必须为 PAGEDROP_KV，并指向该命名空间
+# 3) 本地联调可忽略此文件，用 npm run dev 即可
+#
+# 注：Cloudflare Pages 的 KV 绑定建议在控制台配置；
+# 若使用 wrangler 部署，也可在此声明（id 填你的 KV namespace id）：
+# [[kv_namespaces]]
+# binding = "PAGEDROP_KV"
+# id = "REPLACE_WITH_YOUR_KV_ID"

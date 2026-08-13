@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PageFly · 部署自定义 HTML 页面的最简方式</title>
+<meta name="description" content="PageFly —— 为静态内容而生的极简托管页。一次上传，随处访问。" />
+<style>
+  :root{
+    --bg:#f6f7fb;
+    --panel:#ffffff;
+    --ink:#0f172a;
+    --muted:#64748b;
+    --line:#e7e9f0;
+    --brand:#6366f1;
+    --brand-2:#8b5cf6;
+    --brand-ink:#4f46e5;
+    --ok:#16a34a;
+    --radius:16px;
+    --shadow:0 1px 2px rgba(15,23,42,.04), 0 12px 32px -12px rgba(79,70,229,.18);
+    --shadow-sm:0 1px 2px rgba(15,23,42,.05), 0 4px 14px -8px rgba(15,23,42,.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(139,92,246,.10), transparent 60%),
+      radial-gradient(1000px 500px at 0% 0%, rgba(99,102,241,.10), transparent 55%),
+      var(--bg);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
+
+  /* nav */
+  nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0;}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:.2px;text-decoration:none;color:var(--ink);}
+  .brand .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--brand-2));display:grid;place-items:center;box-shadow:var(--shadow-sm);}
+  .brand .mark svg{width:17px;height:17px;color:#fff;}
+  .nav-links{display:flex;align-items:center;gap:18px;font-size:14px;}
+  .nav-links a{color:var(--muted);text-decoration:none;transition:color .15s;}
+  .nav-links a:hover{color:var(--ink);}
+
+  /* hero */
+  header.hero{padding:54px 0 30px;text-align:center;}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.7);backdrop-filter:blur(6px);font-size:13px;color:var(--brand-ink);font-weight:600;letter-spacing:.3px;}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand-2));}
+  h1{font-size:clamp(32px,5vw,52px);line-height:1.12;margin:22px 0 14px;font-weight:800;letter-spacing:-.5px;}
+  h1 .grad{background:linear-gradient(120deg,var(--brand),var(--brand-2));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{font-size:17px;color:var(--muted);margin:0 auto;max-width:560px;line-height:1.6;}
+
+  /* upload card */
+  .card{margin:36px auto 0;max-width:760px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+  .drop{padding:34px 28px;border-bottom:1px solid var(--line);text-align:center;transition:.18s;cursor:text;}
+  .drop.drag{background:linear-gradient(135deg,rgba(99,102,241,.06),rgba(139,92,246,.06));border-bottom-color:var(--brand);}
+  .drop .ic{width:44px;height:44px;margin:0 auto 12px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.12));color:var(--brand-ink);}
+  .drop .ic svg{width:22px;height:22px;}
+  .drop strong{font-size:15px;}
+  .drop p{margin:6px 0 0;font-size:13px;color:var(--muted);}
+  textarea{width:100%;min-height:200px;resize:vertical;border:0;outline:0;padding:18px 20px;font:13px/1.6 "SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;color:var(--ink);background:#fbfbfe;display:block;}
+  textarea::placeholder{color:#aab0c0;}
+  .actions{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-top:1px solid var(--line);background:#fcfcff;}
+  .meta{font-size:12.5px;color:var(--muted);}
+  .btn{border:0;cursor:pointer;font-size:14px;font-weight:600;padding:11px 20px;border-radius:11px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;box-shadow:0 8px 20px -8px rgba(99,102,241,.6);transition:transform .12s, box-shadow .15s;}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 12px 24px -8px rgba(99,102,241,.65);}
+  .btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+
+  /* result */
+  .result{margin-top:18px;max-width:760px;margin-left:auto;margin-right:auto;display:none;}
+  .result.show{display:block;animation:pop .25s ease;}
+  @keyframes pop{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  .result .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-sm);padding:16px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .result .ok{color:var(--ok);font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;}
+  .result input{flex:1;min-width:240px;border:1px solid var(--line);background:#fbfbfe;border-radius:9px;padding:10px 12px;font:13px ui-monospace,monospace;color:var(--ink);outline:0;}
+  .result input:focus{border-color:var(--brand);}
+  .ghost{border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:600;font-size:13px;padding:9px 14px;border-radius:9px;cursor:pointer;transition:.15s;text-decoration:none;}
+  .ghost:hover{border-color:var(--brand);color:var(--brand-ink);}
+  .open{margin-left:auto;}
+
+  /* features */
+  .features{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:56px 0 12px;}
+  .feat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow-sm);}
+  .feat .fi{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.12));color:var(--brand-ink);margin-bottom:12px;}
+  .feat h3{margin:0 0 6px;font-size:15.5px;}
+  .feat p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.6;}
+
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:34px 0 46px;}
+  footer a{color:var(--muted);text-decoration:none;}
+  @media (max-width:720px){.features{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="/">
+        <span class="mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+        </span>
+        PageFly
+      </a>
+      <div class="nav-links">
+        <a href="#how">怎么用</a>
+        <a href="#" id="sampleBtn">试试示例</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <span class="eyebrow"><span class="dot"></span>为静态内容而生的 · 极简 · 托管页</span>
+      <h1>部署自定义 HTML 页面<br>的<span class="grad">最简方式</span></h1>
+      <p class="sub">一次上传，随处访问。把任意 HTML 页面交给 PageFly，立刻得到一个可分享的链接。</p>
+
+      <div class="card">
+        <div class="drop" id="drop">
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M4 20h16"/></svg>
+          </div>
+          <strong>拖入 .html 文件，或点击此处粘贴代码</strong>
+          <p>支持完整的 HTML / CSS / JS 页面</p>
+        </div>
+        <textarea id="code" placeholder="<!-- 在此粘贴你的 HTML 代码 -->&#10;<h1>Hello PageFly</h1>"></textarea>
+        <div class="actions">
+          <span class="meta" id="meta">Ctrl/Cmd + Enter 也可生成</span>
+          <button class="btn" id="gen">生成分享链接</button>
+        </div>
+      </div>
+
+      <div class="result" id="result">
+        <div class="box">
+          <span class="ok">✓ 已生成</span>
+          <input id="url" readonly />
+          <button class="ghost" id="copy">复制</button>
+          <a class="ghost open" id="open" target="_blank" rel="noopener">打开预览 →</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="features" id="how">
+      <div class="feat">
+        <div class="fi"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+        <h3>极简，无需构建</h3>
+        <p>没有框架、没有打包步骤。上传即托管，链接立等可取。</p>
+      </div>
+      <div class="feat">
+        <div class="fi"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+        <h3>随处访问</h3>
+        <p>运行在 Cloudflare 边缘网络，全球低延迟，随时可分享、可嵌入。</p>
+      </div>
+      <div class="feat">
+        <div class="fi"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <h3>安全隔离</h3>
+        <p>预览页采用 iframe 沙箱渲染，与站点菜单天然隔离，互不干扰。</p>
+      </div>
+    </section>
+
+    <footer>
+      PageFly · 为静态内容而生 &nbsp;·&nbsp; <a href="/">上传一个页面试试 →</a>
+    </footer>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const code = $('code'), drop = $('drop'), gen = $('gen'), result = $('result');
+
+  // 文件选择 / 拖拽
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file'; fileInput.accept = '.html,text/html';
+  drop.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => readFile(fileInput.files[0]));
+
+  ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+  drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) readFile(f); });
+
+  async function readFile(f){
+    if (!f) return;
+    code.value = await f.text();
+    drop.querySelector('strong').textContent = '已载入：' + f.name;
+  }
+
+  // 示例
+  $('sampleBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    code.value = '<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}h1{font-size:42px}</style></head><body><h1>Hello PageFly ✈</h1></body></html>';
+    drop.querySelector('strong').textContent = '已载入示例页面';
+  });
+
+  // 生成
+  async function generate(){
+    const html = code.value;
+    if (!html.trim()) { alert('请先粘贴 HTML 或选择文件'); return; }
+    gen.disabled = true; gen.textContent = '生成中…';
+    try {
+      const res = await fetch('/api/upload', {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ html })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'error');
+      $('url').value = data.url;
+      $('open').href = data.url;
+      result.classList.add('show');
+      result.scrollIntoView({behavior:'smooth', block:'center'});
+    } catch(err){
+      alert('生成失败：' + err.message);
+    } finally {
+      gen.disabled = false; gen.textContent = '生成分享链接';
+    }
+  }
+  gen.addEventListener('click', generate);
+  code.addEventListener('keydown', e => { if ((e.metaKey||e.ctrlKey) && e.key === 'Enter') generate(); });
+
+  $('copy').addEventListener('click', async () => {
+    await navigator.clipboard.writeText($('url').value);
+    const b = $('copy'); const t = b.textContent; b.textContent = '已复制✓';
+    setTimeout(() => b.textContent = t, 1500);
+  });
+</script>
+</body>
+</html>
