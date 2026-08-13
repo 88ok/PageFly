@@ -1,12 +1,11 @@
 import { savePage } from "../../src/upload.js";
 
 export async function onRequestPost({ request, env }) {
-  // KV 未绑定时的明确报错（Pages 通过 git 部署时绑定需在控制台配置）
   if (!env.PAGEDROP_KV) {
     return Response.json(
       {
         error: "kv_not_bound",
-        hint: "请在 Cloudflare Pages 控制台 → Settings → Functions → KV namespace bindings 添加绑定：变量名填 PAGEDROP_KV，指向你的 KV 命名空间。",
+        hint: "请在 Cloudflare Pages 控制台的 Settings → Functions → KV namespace bindings 中添加变量名 PAGEDROP_KV",
       },
       { status: 500 }
     );
@@ -14,13 +13,16 @@ export async function onRequestPost({ request, env }) {
 
   const contentType = request.headers.get("content-type") || "";
   let html;
+  let title = "";
   try {
     if (contentType.includes("application/json")) {
       const data = await request.json();
       html = data?.html ?? "";
+      title = data?.title ?? "";
     } else {
       const form = await request.formData();
       html = form.get("html") ?? "";
+      title = form.get("title") ?? "";
     }
   } catch (e) {
     return Response.json({ error: "bad_request" }, { status: 400 });
@@ -31,7 +33,7 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ error: "empty_html" }, { status: 400 });
   }
 
-  const id = await savePage(env, html);
+  const id = await savePage(env, html, title);
   const base = new URL(request.url).origin;
   return Response.json({ id, url: `${base}/v/${id}` });
 }

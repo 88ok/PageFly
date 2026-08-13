@@ -1,10 +1,10 @@
 import { renderViewPage } from "../../src/render.js";
+import { extractTitle } from "../../src/upload.js";
 
 export async function onRequestGet({ params, env, request }) {
-  // KV 未绑定时的明确报错
   if (!env.PAGEDROP_KV) {
     return new Response(
-      "PAGEDROP_KV 未绑定：请在 Cloudflare Pages 控制台 → Settings → Functions → KV namespace bindings 添加变量名 PAGEDROP_KV，并指向你的 KV 命名空间。",
+      "PAGEDROP_KV 未绑定：请在 Pages 控制台 Settings → Functions → KV namespace bindings 添加 PAGEDROP_KV 指向你的 KV 命名空间",
       { status: 500, headers: { "content-type": "text/html; charset=utf-8" } }
     );
   }
@@ -19,8 +19,11 @@ export async function onRequestGet({ params, env, request }) {
   }
 
   let html;
+  let title = "";
   try {
-    html = JSON.parse(raw).html;
+    const parsed = JSON.parse(raw);
+    html = parsed.html;
+    title = parsed.title || extractTitle(html) || "";
   } catch (e) {
     return new Response("数据损坏", { status: 500 });
   }
@@ -34,7 +37,7 @@ export async function onRequestGet({ params, env, request }) {
   }
 
   const selfUrl = `${url.origin}/v/${id}`;
-  return new Response(renderViewPage({ id, selfUrl, html }), {
+  return new Response(renderViewPage({ id, selfUrl, html, title }), {
     headers: { "content-type": "text/html; charset=utf-8" },
   });
 }

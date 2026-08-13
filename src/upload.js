@@ -9,9 +9,24 @@ export function generateId(len = 8) {
   return s;
 }
 
-// 把一页 HTML 存入 KV。key=短ID，value=JSON{html, createdAt}
-export async function savePage(env, html) {
+// 从 HTML 源码中提取 <title> 文本
+export function extractTitle(html) {
+  const m = String(html || "").match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  if (!m) return "";
+  return m[1]
+    .replace(/<[^>]+>/g, " ")
+    .replace(/[\s\r\n]+/g, " ")
+    .trim();
+}
+
+// 把一页 HTML 存入 KV。key=短ID，value=JSON{html, title, createdAt}
+export async function savePage(env, html, title = "") {
   const id = generateId();
-  await env.PAGEDROP_KV.put(id, JSON.stringify({ html, createdAt: Date.now() }));
+  const payload = {
+    html,
+    title: title?.trim?.() || extractTitle(html) || "未命名页面",
+    createdAt: Date.now(),
+  };
+  await env.PAGEDROP_KV.put(id, JSON.stringify(payload));
   return id;
 }
