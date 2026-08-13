@@ -37,7 +37,14 @@ export async function onRequestGet({ params, env, request }) {
   }
 
   const selfUrl = `${url.origin}/v/${id}`;
-  return new Response(renderViewPage({ id, selfUrl, type, raw: content, title }), {
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
+  try {
+    return new Response(renderViewPage({ id, selfUrl, type, raw: content, title }), {
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  } catch (e) {
+    return new Response(
+      "<h1>页面渲染失败</h1><p>该内容可能包含无法解析的结构，请重新发布。</p>",
+      { status: 500, headers: { "content-type": "text/html; charset=utf-8" } }
+    );
+  }
 }

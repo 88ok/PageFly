@@ -10,8 +10,13 @@ export function renderViewPage({ id, selfUrl, type = "html", raw = "", title = "
 
   if (type === "md") {
     // Markdown → HTML（内置轻量渲染器，零依赖）
-    const body = renderMarkdown(raw);
-    contentHtml = renderMarkdownDocument(body);
+    try {
+      const body = renderMarkdown(raw);
+      contentHtml = renderMarkdownDocument(body);
+    } catch (e) {
+      // 极端内容渲染异常时兜底：原样以 <pre> 展示，绝不抛 500
+      contentHtml = renderMarkdownDocument(`<pre>${escapeHtml(String(raw || ""))}</pre>`);
+    }
     // md 不需要跑脚本，关掉 allow-scripts，比 html 视图更隔离
     sandbox = 'allow-popups allow-popups-to-escape-sandbox allow-same-origin';
   } else {
@@ -33,7 +38,7 @@ export function renderViewPage({ id, selfUrl, type = "html", raw = "", title = "
 <link rel="icon" href="/favicon.ico" sizes="32x32" />
 <title>${escapeHtml(displayTitle)} · PageFly</title>
 <style>
-:root{--bar-h:52px;--brand:#6366f1;--brand-2:#8b5cf6;--bg:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280;}
+:root{--bar-h:52px;--brand:#6366f1;--brand-2:#8b5cf6;--brand-ink:#4f46e5;--bg:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280;}
 *{box-sizing:border-box;}
 html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);}
 .bar{position:fixed;top:0;left:0;right:0;height:var(--bar-h);display:flex;align-items:center;gap:10px;padding:0 16px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);z-index:10;}
@@ -81,7 +86,7 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Seg
 </html>`;
 }
 
-// 把 marked 生成的 HTML 包成一份带排版的完整文档（注入 iframe srcdoc）
+// 把 Markdown 渲染出的 HTML 包成一份带排版的完整文档（注入 iframe srcdoc）
 function renderMarkdownDocument(bodyHtml) {
   const css = `
 :root{

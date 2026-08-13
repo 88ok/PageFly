@@ -38,7 +38,15 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ error: "empty_content" }, { status: 400 });
   }
 
-  const id = await savePage(env, { type, raw: content, title });
+  let id;
+  try {
+    id = await savePage(env, { type, raw: content, title });
+  } catch (e) {
+    return Response.json(
+      { error: "save_failed", hint: String(e?.message || e) },
+      { status: 500 }
+    );
+  }
   const base = new URL(request.url).origin;
   return Response.json({ id, url: `${base}/v/${id}` });
 }

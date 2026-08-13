@@ -32,12 +32,13 @@ pagefly/
 └── package.json
 ```
 
-- **格式自动识别**：上传时不让用户选择格式。服务端 `detectType()` 优先识别 Markdown 特征（`# 标题`、`- 列表`、`**粗体**`、反引号代码、`[链接]` 等）；只有明确以 `<!doctype html>` 或 `<html` 开头才判为 HTML。Markdown 会自动渲染成排版网页，且沙箱更隔离（不执行脚本）。
+- **格式自动识别**：上传时不让用户选择格式。服务端 `detectType()` **Markdown 特征优先**（`# 标题`、`- 列表`、`**粗体**`、反引号代码、`[链接]`、引用、`~~删除线~~` 等）；只有明确以 `<!doctype html>` / `<html` 开头，或明显是 HTML 标签（且不是注释 `<!--`、自动链接 `<https://>`）才判为 HTML。首页也会在发布按钮旁实时显示「自动识别：Markdown / HTML」，误判一目了然。Markdown 自动渲染成排版网页，且沙箱更隔离（不执行脚本）。
 - **存储**：Cloudflare KV。每条页面 = 一个 key（`{type, raw, title, createdAt}`）。
 - **HTML 模式**：用户 HTML 原样通过 `<iframe srcdoc="...">` 注入，与顶部菜单天然隔离；
   iframe 带 `sandbox="allow-scripts allow-same-origin ..."`，可运行 JS / 表单 / 弹窗，但不影响外层站点。
-- **Markdown 模式**：服务端用内置轻量渲染器（`src/markdown.js`，零依赖）把 Markdown 渲染成 HTML 并套一套排版样式后注入 iframe；
-  iframe 沙箱**关闭 allow-scripts**（`allow-popups allow-same-origin`），更安全——md 本不需要跑脚本。
+- **Markdown 模式**：服务端用内置轻量渲染器（`src/markdown.js`，零依赖、迭代解析、含递归深度上限防栈溢出）把 Markdown 渲染成 HTML 并套排版样式后注入 iframe；
+  支持的语法：标题、粗体/斜体/删除线、行内与块级代码（含语言类名）、引用（可嵌套）、有序/无序列表（可嵌套）、GFM 表格（含对齐）、分割线、链接/图片/自动链接 `<https://>`；
+  iframe 沙箱**关闭 allow-scripts**（`allow-popups allow-same-origin`），更安全——md 本不需要跑脚本；即便渲染异常也会兜底为 `<pre>` 原样展示，绝不抛 500。
 - **源码查看**：`/v/:id?raw=1` 直接返回原始内容（md 返回 `text/markdown`，html 返回 `text/html`，可下载、新标签打开）。
 - **依赖**：**无任何外部依赖**。Markdown 渲染为内置实现，`npm install` 已不需要，部署更快更稳。
 
@@ -51,14 +52,32 @@ npm run dev          # 启动 http://localhost:8788（无需 npm install，零�
 
 ## 部署到 Cloudflare Pages
 
+### 方式一：控制台连接 Git 仓库（推荐，最简单）
+
 1. 在 Cloudflare 控制台 **Workers & Pages → KV** 创建一个命名空间（如 `pagefly-pages`）。
 2. **Workers & Pages → 你的 Pages 项目 → Settings → Functions → KV namespace bindings**，
    添加绑定：变量名（binding）填 **`PAGEDROP_KV`**，绑定到上一步的命名空间。
-3. 连接 Git 仓库（或 `wrangler pages deploy public`），构建输出目录填 **`public`**。
-4. 部署完成后即获得 `https://你的项目.pages.dev`。
+3. 连接 Git 仓库，构建输出目录填 **`public`**，部署后即获得 `https://你的项目.pages.dev`。
 
-> 后续接 Cloudflare CDN：Pages 默认就在 Cloudflare 边缘网络上，
-> 可在 **Speed / Caching** 中开启缓存；`/v/:id` 为静态化内容，适合边缘缓存加速。
+> 此方式下 `wrangler.toml` 中的 KV 块不会被读取，绑定以控制台为准。
+
+### 方式二：本地 / CI 用 `wrangler pages deploy`（KV id 由环境变量注入）
+
+`wrangler.toml` 只声明 binding 名，**命名空间 ID 用环境变量 `${PAGEDROP_KV_ID}` 注入**，不硬编码进仓库：
+
+```bash
+# 1) 安装 wrangler 并登录
+npm i -g wrangler && wrangler login
+
+# 2) 部署时注入 KV 命名空间 ID（仅当前终端会话，勿写入仓库）
+PAGEDROP_KV_ID=你的命名空间ID wrangler pages deploy public
+```
+
+开发期可用 `.dev.vars` 写一行 `PAGEDROP_KV_ID=xxx`（已在 `.gitignore` 中，不会提交）。
+注意：一旦用本文件部署，KV 绑定以 `wrangler.toml` 为准，控制台同名绑定编辑会被忽略。
+
+> Pages 默认运行在 Cloudflare 边缘网络；可在 **Speed / Caching** 中开启缓存，
+> `/v/:id` 为静态化内容，适合边缘缓存加速。
 
 ## 安全说明
 

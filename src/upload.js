@@ -39,19 +39,20 @@ export function extractTitle(raw, type) {
 }
 
 // 自动判断内容类型：
-// - 以 <!doctype html> / <html 开头 → HTML
-// - 否则若含明显 Markdown 语法特征 → Markdown（沙箱更隔离）
-// - 其余再判断是否以普通 HTML 标签开头 → HTML
-// - 默认按 Markdown 渲染
+// - Markdown 特征优先（# 标题、**粗体**、列表、引用、代码、链接等）→ Markdown
+// - 明确以 <!doctype html> / <html 开头 → HTML
+// - 以 < 开头但不是注释/自动链接、且像是 HTML 标签（<div> <p> <body> 等）→ HTML
+// - 默认按 Markdown 渲染（宁可当 Markdown，也不把 Markdown 误判成 HTML 原文）
 export function detectType(content) {
   const s = String(content || "").trim();
   if (!s) return "md";
-  if (/^<!doctype\s+html/i.test(s)) return "html";
-  if (/^<html\b/i.test(s)) return "html";
   for (const re of MD_MARKERS) {
     if (re.test(s)) return "md";
   }
-  if (/^<[a-z!]/i.test(s)) return "html";
+  if (/^<!doctype\s+html/i.test(s)) return "html";
+  if (/^<html\b/i.test(s)) return "html";
+  // 以 < 开头，排除注释(<!--)与自动链接(<https:// <mailto:) 后仍是标签 → HTML
+  if (/^<(?!!--|https?:|mailto:)[a-zA-Z/]/i.test(s)) return "html";
   return "md";
 }
 

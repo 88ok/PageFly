@@ -91,6 +91,11 @@
   .publish{border:0;cursor:pointer;font-size:15px;font-weight:700;padding:13px 26px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;box-shadow:var(--shadow-brand);transition:transform .12s, box-shadow .15s;display:inline-flex;align-items:center;gap:8px;}
   .publish:hover{transform:translateY(-1px);box-shadow:0 14px 28px -10px rgba(99,102,241,.55);}
   .publish:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+  .type-hint{font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .type-hint b{font-weight:700;padding:2px 9px;border-radius:999px;font-size:11px;letter-spacing:.3px;}
+  .type-hint b.md{background:#f0fdf4;color:#15803d;}
+  .type-hint b.html{background:#eef0ff;color:var(--brand-ink);}
+  @media (max-width:720px){ .type-hint{display:none;} }
 
   /* modal */
   .modal{display:none;position:fixed;inset:0;z-index:50;background:rgba(15,23,42,.35);backdrop-filter:blur(2px);align-items:center;justify-content:center;padding:20px;}
@@ -174,6 +179,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
               <span id="modeLabel">切换为直接粘贴代码</span>
             </button>
+            <span class="type-hint" id="typeHint">自动识别：<b id="typeBadge">—</b></span>
             <button class="publish" id="publishBtn" type="button">
               确认发布
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
@@ -252,6 +258,8 @@
     modeToggle: $('modeToggle'),
     modeLabel: $('modeLabel'),
     publishBtn: $('publishBtn'),
+    typeBadge: $('typeBadge'),
+    typeHint: $('typeHint'),
     pickBtn: $('pickBtn'),
     pickLabel: $('pickLabel'),
     modal: $('modal'),
@@ -285,6 +293,7 @@
     // 标题为空时自动抓取（HTML 取 <title>，Markdown 取首行 #）
     const t = extractTitle(text);
     if (!els.pageTitle.value.trim() && t) els.pageTitle.value = t;
+    updateTypeHint();
   }
 
   function extractTitle(text){
@@ -294,6 +303,29 @@
     const h = t.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
     if (h) return h[1].replace(/<[^>]+>/g, ' ').replace(/[\s\r\n]+/g, ' ').trim();
     return '';
+  }
+
+  // 前端实时识别类型（与服务端 detectType 保持一致），让用户发布前可见
+  function detectTypeClient(text){
+    const s = String(text || "").trim();
+    if (!s) return "md";
+    const mdMarkers = [
+      /^\s*#{1,6}\s+\S/m, /\*\*[^\s*].*?\*\*/, /(^|\n)\s*>\s+\S/m,
+      /(^|\n)\s*-\s+\S/m, /(^|\n)\s*\*\s+\S/m, /(^|\n)\s*\d+\.\s+\S/m,
+      /`[^`]+`/, /!\[.*?\]\(.*?\)/, /\[.*?\]\(.*?\)/, /(^|\n)\s*```[\s\S]*?```/m,
+    ];
+    for (const re of mdMarkers) if (re.test(s)) return "md";
+    if (/^<!doctype\s+html/i.test(s)) return "html";
+    if (/^<html\b/i.test(s)) return "html";
+    if (/^<(?!!--|https?:|mailto:)[a-zA-Z/]/i.test(s)) return "html";
+    return "md";
+  }
+
+  function updateTypeHint(){
+    const content = state.mode === 'paste' ? els.code.value : state.html;
+    const t = detectTypeClient(content);
+    els.typeBadge.textContent = t === 'md' ? 'Markdown' : 'HTML';
+    els.typeBadge.className = t === 'md' ? 'md' : 'html';
   }
 
   function escapeHtml(str){
@@ -310,13 +342,17 @@
     }
   }
 
-  els.modeToggle.addEventListener('click', () => setMode(state.mode === 'upload' ? 'paste' : 'upload'));
+  els.modeToggle.addEventListener('click', () => {
+    setMode(state.mode === 'upload' ? 'paste' : 'upload');
+    updateTypeHint();
+  });
 
   // 粘贴区输入变化
   els.code.addEventListener('input', () => {
     state.html = els.code.value;
     const t = extractTitle(state.html);
     if (!els.pageTitle.value.trim() && t) els.pageTitle.value = t;
+    updateTypeHint();
   });
 
   // 发布
@@ -369,6 +405,9 @@
   els.modal.addEventListener('click', (e) => {
     if (e.target === els.modal) els.resultAgain.click();
   });
+
+  // 初始刷新一次识别徽标
+  updateTypeHint();
 </script>
 </body>
 </html>
