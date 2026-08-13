@@ -19,18 +19,19 @@
 
 ```
 pagefly/
-├── public/index.html        # 主页：上传 UI（HTML / Markdown 切换，拖拽 / 选文件 / 粘贴 → 生成链接）
+├── public/index.html        # 主页：上传 UI（拖拽 / 选文件 / 粘贴 → 生成链接；格式自动识别）
 ├── functions/
-│   ├── api/upload.js        # POST：存内容到 KV，返回 {id, url}（支持 type=html|md）
+│   ├── api/upload.js        # POST：存内容到 KV，返回 {id, url}（type 缺省时按内容自动识别 html|md）
 │   └── v/[id].js            # GET：渲染“菜单 + iframe 预览”页
 ├── src/
-│   ├── upload.js            # 生成短 ID + 写入 KV（共享逻辑，含 md 标题抓取）
+│   ├── upload.js            # 生成短 ID + 写入 KV（共享逻辑，含类型自动识别与标题抓取）
 │   └── render.js            # 渲染查看页（菜单 + iframe srcdoc；md 用 marked 渲染）
 ├── dev-server.mjs           # 本地开发服务器（内存 KV，无需 wrangler）
 ├── wrangler.toml
 └── package.json
 ```
 
+- **格式自动识别**：上传时不让用户选择格式。服务端 `detectType()` 按内容判定——以 `<` 标签 / `<!doctype html>` 开头视为 HTML，其余按 Markdown 渲染（Markdown 沙箱更隔离，无脚本执行）。
 - **存储**：Cloudflare KV。每条页面 = 一个 key（`{type, raw, title, createdAt}`）。
 - **HTML 模式**：用户 HTML 原样通过 `<iframe srcdoc="...">` 注入，与顶部菜单天然隔离；
   iframe 带 `sandbox="allow-scripts allow-same-origin ..."`，可运行 JS / 表单 / 弹窗，但不影响外层站点。
@@ -46,7 +47,7 @@ npm install          # 安装依赖（marked）
 npm run dev          # 启动 http://localhost:8788
 ```
 
-打开 http://localhost:8788 → 选择 HTML 或 Markdown → 拖入/粘贴 → 生成链接 → 打开 `/v/xxxx` 查看。
+打开 http://localhost:8788 → 拖入/粘贴 HTML 或 Markdown → 生成链接 → 打开 `/v/xxxx` 查看（格式自动识别）。
 
 ## 部署到 Cloudflare Pages
 

@@ -13,19 +13,20 @@ export async function onRequestPost({ request, env }) {
 
   const contentType = request.headers.get("content-type") || "";
   let content = "";
-  let type = "html";
+  let type; // 缺省时由后端按内容自动判断（HTML / Markdown）
   let title = "";
   try {
     if (contentType.includes("application/json")) {
       const data = await request.json();
       // 兼容旧字段 html
       content = data?.content ?? data?.html ?? "";
-      type = data?.type === "md" ? "md" : "html";
+      type = data?.type === "md" ? "md" : (data?.type === "html" ? "html" : undefined);
       title = data?.title ?? "";
     } else {
       const form = await request.formData();
       content = form.get("content") ?? form.get("html") ?? "";
-      type = form.get("type") === "md" ? "md" : "html";
+      const t = form.get("type");
+      type = t === "md" ? "md" : (t === "html" ? "html" : undefined);
       title = form.get("title") ?? "";
     }
   } catch (e) {

@@ -24,13 +24,24 @@ export function extractTitle(raw, type) {
     .trim();
 }
 
+// 自动判断内容类型：以 < 标签 / <!doctype html> 开头视为 HTML，其余按 Markdown 渲染。
+export function detectType(content) {
+  const s = String(content || "").trim();
+  if (!s) return "md";
+  if (/^<!doctype\s+html/i.test(s)) return "html";
+  if (/^<[a-z!]/i.test(s)) return "html"; // 以标签开头 → 视为 HTML 片段/文档
+  return "md"; // 普通文本 / Markdown（沙箱更隔离，无脚本执行）
+}
+
 // 把一页内容存入 KV。key=短ID，value=JSON{type, raw, title, createdAt}
-export async function savePage(env, { type = "html", raw = "", title = "" }) {
+// type 可显式传入（html|md），缺省时按内容自动判断。
+export async function savePage(env, { type, raw = "", title = "" }) {
   const id = generateId();
+  const detected = type === "html" || type === "md" ? type : detectType(raw);
   const payload = {
-    type,
+    type: detected,
     raw,
-    title: title?.trim?.() || extractTitle(raw, type) || "未命名页面",
+    title: title?.trim?.() || extractTitle(raw, detected) || "未命名页面",
     createdAt: Date.now(),
   };
   await env.PAGEDROP_KV.put(id, JSON.stringify(payload));

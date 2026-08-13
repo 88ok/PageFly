@@ -31,18 +31,19 @@ const server = createServer(async (req, res) => {
     // 上传
     if (req.method === "POST" && u.pathname === "/api/upload") {
       let content = "";
-      let type = "html";
+      let type; // 缺省时由 savePage 自动判断
       let title = "";
       const ct = req.headers["content-type"] || "";
       if (ct.includes("application/json")) {
         const body = await readJson(req);
         content = body.content ?? body.html ?? "";
-        type = body.type === "md" ? "md" : "html";
+        type = body.type === "md" ? "md" : (body.type === "html" ? "html" : undefined);
         title = body.title ?? "";
       } else {
         const form = await readForm(req);
         content = form.get("content") ?? form.get("html") ?? "";
-        type = form.get("type") === "md" ? "md" : "html";
+        const t = form.get("type");
+        type = t === "md" ? "md" : (t === "html" ? "html" : undefined);
         title = form.get("title") ?? "";
       }
       if (!String(content).trim()) return json(res, 400, { error: "empty_content" });

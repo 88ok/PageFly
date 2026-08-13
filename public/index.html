@@ -61,15 +61,6 @@
   .field input.title{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--ink);background:#fbfbfe;outline:0;transition:.15s;}
   .field input.title:focus{border-color:var(--brand);background:#fff;}
 
-  /* format segment */
-  .fmt-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
-  .fmt-label{font-size:13px;font-weight:600;color:var(--muted);}
-  .seg{display:inline-flex;background:#eef0f6;border:1px solid var(--line);border-radius:10px;padding:3px;}
-  .seg-btn{border:0;background:transparent;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);padding:7px 18px;border-radius:8px;transition:.15s;}
-  .seg-btn.active{background:#fff;color:var(--brand-ink);box-shadow:var(--shadow-sm);}
-  .fmt-hint{font-size:12.5px;color:var(--muted);margin-left:auto;}
-  @media(max-width:720px){.fmt-hint{display:none;}}
-
   /* upload / paste area */
   .area{border:1.5px dashed #d1d5db;border-radius:16px;background:#fff;overflow:hidden;transition:.18s;}
   .area.drag{border-color:var(--brand);background:linear-gradient(135deg,rgba(99,102,241,.05),rgba(139,92,246,.05));}
@@ -160,30 +151,21 @@
             <input type="text" id="pageTitle" class="title" placeholder="例如：我的产品落地页" />
           </div>
 
-          <div class="fmt-row">
-            <span class="fmt-label">格式</span>
-            <div class="seg" id="fmtSeg">
-              <button type="button" class="seg-btn active" data-fmt="html">HTML</button>
-              <button type="button" class="seg-btn" data-fmt="md">Markdown</button>
-            </div>
-            <span class="fmt-hint" id="fmtHint">完整网页 · 支持 JS</span>
-          </div>
-
           <div class="area" id="area">
             <div class="upload-zone" id="uploadZone">
               <div class="ic">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M4 20h16"/></svg>
               </div>
-              <h3 id="uploadZoneH3">点击上传 HTML</h3>
-              <p id="uploadZoneP">支持拖拽 .html 文件至此处</p>
+              <h3 id="uploadZoneH3">点击上传文件</h3>
+              <p id="uploadZoneP">支持拖拽 .html / .md 文件，自动识别格式</p>
               <button class="btn-orange" id="pickBtn" type="button">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                <span id="pickLabel">点击选择本地 HTML 文件</span>
+                <span id="pickLabel">点击选择本地文件</span>
               </button>
               <div class="file-hint" id="fileHint"></div>
             </div>
             <div class="paste-zone" id="pasteZone">
-              <textarea id="code" placeholder="<!-- 在此粘贴你的 HTML 代码 -->&#10;<h1>Hello PageFly</h1>"></textarea>
+              <textarea id="code" placeholder="<!-- 在此粘贴 HTML，或写 Markdown -->&#10;# 例如这个标题&#10;**加粗**、列表、> 引用 都会被自动渲染"></textarea>
             </div>
           </div>
 
@@ -254,7 +236,6 @@
 
   const state = {
     mode: 'upload', // 'upload' | 'paste'
-    type: 'html',  // 'html' | 'md'
     html: '',
     title: '',
   };
@@ -273,8 +254,6 @@
     publishBtn: $('publishBtn'),
     pickBtn: $('pickBtn'),
     pickLabel: $('pickLabel'),
-    fmtSeg: $('fmtSeg'),
-    fmtHint: $('fmtHint'),
     modal: $('modal'),
     resultUrl: $('resultUrl'),
     resultCopy: $('resultCopy'),
@@ -285,7 +264,7 @@
   // 文件选择
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
-  fileInput.accept = '.html,text/html';
+  fileInput.accept = '.html,.htm,.md,.markdown,.txt,text/html,text/markdown';
   els.pickBtn.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', () => readFile(fileInput.files[0]));
 
@@ -303,53 +282,29 @@
     const text = await f.text();
     state.html = text;
     els.fileHint.innerHTML = '已选择文件：<b>' + escapeHtml(f.name) + '</b>，点击「确认发布」即可生成链接';
-    // 标题为空时按格式自动抓取
-    const t = extractTitle(text, state.type);
+    // 标题为空时自动抓取（HTML 取 <title>，Markdown 取首行 #）
+    const t = extractTitle(text);
     if (!els.pageTitle.value.trim() && t) els.pageTitle.value = t;
   }
 
-  function extractTitle(text, type){
-    if (type === 'md') {
-      const m = String(text).match(/^\s*#\s+(.+?)\s*$/m);
-      return m ? m[1].trim() : '';
-    }
-    const m = String(text).match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    if (!m) return '';
-    return m[1].replace(/<[^>]+>/g, ' ').replace(/[\s\r\n]+/g, ' ').trim();
+  function extractTitle(text){
+    const t = String(text || "");
+    const md = t.match(/^\s*#\s+(.+?)\s*$/m);
+    if (md) return md[1].trim();
+    const h = t.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    if (h) return h[1].replace(/<[^>]+>/g, ' ').replace(/[\s\r\n]+/g, ' ').trim();
+    return '';
   }
 
   function escapeHtml(str){
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  // 格式切换：HTML / Markdown
-  function applyFmt(){
-    const md = state.type === 'md';
-    fileInput.accept = md ? '.md,.markdown,.txt,text/markdown' : '.html,text/html';
-    els.uploadZoneH3.textContent = md ? '点击上传 Markdown' : '点击上传 HTML';
-    els.uploadZoneP.textContent = md ? '支持拖拽 .md / .markdown 文件至此处' : '支持拖拽 .html 文件至此处';
-    els.pickLabel.textContent = md ? '点击选择本地 Markdown 文件' : '点击选择本地 HTML 文件';
-    els.fmtHint.textContent = md ? '自动渲染排版 · 更隔离' : '完整网页 · 支持 JS';
-    els.code.placeholder = md
-      ? '# 在这里写 Markdown\n\n支持 **加粗**、*斜体*、列表、> 引用、`代码`、[链接](url)…'
-      : '<!-- 在此粘贴你的 HTML 代码 -->\n<h1>Hello PageFly</h1>';
-  }
-
-  els.fmtSeg.querySelectorAll('.seg-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      state.type = btn.dataset.fmt;
-      els.fmtSeg.querySelectorAll('.seg-btn').forEach(x => x.classList.toggle('active', x === btn));
-      applyFmt();
-    });
-  });
-
   // 切换 上传/粘贴 模式
   function setMode(mode){
     state.mode = mode;
     els.area.classList.toggle('paste', mode === 'paste');
-    els.modeLabel.textContent = mode === 'upload'
-      ? (state.type === 'md' ? '切换为直接粘贴 Markdown 代码' : '切换为直接粘贴 HTML 代码')
-      : (state.type === 'md' ? '切换为上传本地 Markdown 文件' : '切换为上传本地 HTML 文件');
+    els.modeLabel.textContent = mode === 'upload' ? '切换为直接粘贴代码' : '切换为上传本地文件';
     if (mode === 'paste') {
       setTimeout(() => els.code.focus(), 50);
     }
@@ -360,14 +315,14 @@
   // 粘贴区输入变化
   els.code.addEventListener('input', () => {
     state.html = els.code.value;
-    const t = extractTitle(state.html, state.type);
+    const t = extractTitle(state.html);
     if (!els.pageTitle.value.trim() && t) els.pageTitle.value = t;
   });
 
   // 发布
   async function publish(){
     const content = state.mode === 'paste' ? els.code.value : state.html;
-    if (!content.trim()) { alert(state.type === 'md' ? '请先粘贴 Markdown 或选择文件' : '请先粘贴 HTML 或选择文件'); return; }
+    if (!content.trim()) { alert('请先粘贴内容或选择文件'); return; }
 
     const title = els.pageTitle.value.trim();
     els.publishBtn.disabled = true; els.publishBtn.textContent = '发布中…';
@@ -375,7 +330,7 @@
       const res = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ content, type: state.type, title })
+        body: JSON.stringify({ content, title })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'error');
@@ -414,9 +369,6 @@
   els.modal.addEventListener('click', (e) => {
     if (e.target === els.modal) els.resultAgain.click();
   });
-
-  // 初始化格式相关文案
-  applyFmt();
 </script>
 </body>
 </html>
