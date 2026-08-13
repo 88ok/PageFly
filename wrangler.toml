@@ -21,4 +21,3 @@ pages_build_output_dir = "public"
 
 [[kv_namespaces]]
 binding = "PAGEDROP_KV"
-id = "${PAGEDROP_KV_ID}"
