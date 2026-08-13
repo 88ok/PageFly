@@ -15,14 +15,12 @@
     --brand:#6366f1;
     --brand-2:#8b5cf6;
     --brand-ink:#4f46e5;
-    --orange:#f97316;
-    --orange-2:#ea580c;
-    --orange-bg:#fff7ed;
+    --brand-bg:rgba(99,102,241,.10);
     --ok:#16a34a;
     --radius:16px;
     --shadow:0 1px 2px rgba(15,23,42,.04), 0 12px 32px -12px rgba(79,70,229,.18);
     --shadow-sm:0 1px 2px rgba(15,23,42,.05), 0 4px 14px -8px rgba(15,23,42,.12);
-    --shadow-orange:0 10px 24px -10px rgba(249,115,22,.45);
+    --shadow-brand:0 10px 24px -10px rgba(99,102,241,.45);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;}
@@ -48,16 +46,16 @@
   .nav-links a:hover{color:var(--ink);}
 
   /* hero */
-  header.hero{padding:54px 0 30px;text-align:center;}
+  header.hero{padding:28px 0 14px;text-align:center;}
   .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.7);backdrop-filter:blur(6px);font-size:13px;color:var(--brand-ink);font-weight:600;letter-spacing:.3px;}
   .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand-2));}
-  h1{font-size:clamp(32px,5vw,52px);line-height:1.12;margin:22px 0 14px;font-weight:800;letter-spacing:-.5px;}
+  h1{font-size:clamp(30px,5vw,46px);line-height:1.12;margin:16px 0 10px;font-weight:800;letter-spacing:-.5px;}
   h1 .grad{background:linear-gradient(120deg,var(--brand),var(--brand-2));-webkit-background-clip:text;background-clip:text;color:transparent;}
   .sub{font-size:17px;color:var(--muted);margin:0 auto;max-width:560px;line-height:1.6;}
 
   /* publish card */
-  .card{margin:36px auto 0;max-width:760px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;text-align:left;}
-  .card-body{padding:28px;}
+  .card{margin:22px auto 0;max-width:760px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;text-align:left;}
+  .card-body{padding:24px;}
   .field{margin-bottom:18px;}
   .field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;}
   .field input.title{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--ink);background:#fbfbfe;outline:0;transition:.15s;}
@@ -66,13 +64,13 @@
   /* upload / paste area */
   .area{border:1.5px dashed #d1d5db;border-radius:16px;background:#fff;overflow:hidden;transition:.18s;}
   .area.drag{border-color:var(--brand);background:linear-gradient(135deg,rgba(99,102,241,.05),rgba(139,92,246,.05));}
-  .upload-zone{padding:40px 28px;text-align:center;cursor:pointer;}
-  .upload-zone .ic{width:64px;height:64px;margin:0 auto 16px;border-radius:16px;display:grid;place-items:center;background:var(--orange-bg);color:var(--orange);}
+  .upload-zone{padding:32px 28px;text-align:center;cursor:pointer;}
+  .upload-zone .ic{width:64px;height:64px;margin:0 auto 16px;border-radius:16px;display:grid;place-items:center;background:var(--brand-bg);color:var(--brand-ink);}
   .upload-zone .ic svg{width:28px;height:28px;}
   .upload-zone h3{margin:0 0 6px;font-size:18px;font-weight:700;color:var(--ink);}
   .upload-zone p{margin:0 0 18px;font-size:13px;color:var(--muted);}
-  .btn-orange{border:0;cursor:pointer;font-size:14px;font-weight:600;padding:12px 22px;border-radius:10px;background:linear-gradient(135deg,var(--orange),var(--orange-2));color:#fff;box-shadow:var(--shadow-orange);transition:transform .12s, box-shadow .15s;display:inline-flex;align-items:center;gap:8px;}
-  .btn-orange:hover{transform:translateY(-1px);box-shadow:0 14px 28px -10px rgba(249,115,22,.55);}
+  .btn-orange{border:0;cursor:pointer;font-size:14px;font-weight:600;padding:12px 22px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;box-shadow:var(--shadow-brand);transition:transform .12s, box-shadow .15s;display:inline-flex;align-items:center;gap:8px;}
+  .btn-orange:hover{transform:translateY(-1px);box-shadow:0 14px 28px -10px rgba(99,102,241,.55);}
   .btn-orange:disabled{opacity:.55;cursor:not-allowed;transform:none;}
   .paste-zone{display:none;padding:18px 18px 0;}
   .paste-zone textarea{width:100%;min-height:220px;resize:vertical;border:1px solid var(--line);border-radius:12px;outline:0;padding:16px;font:13px/1.6 "SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;color:var(--ink);background:#fbfbfe;display:block;}
@@ -90,8 +88,8 @@
   .toggle{color:var(--muted);font-size:13px;background:transparent;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:6px 0;transition:.15s;}
   .toggle:hover{color:var(--brand-ink);}
   .toggle svg{width:15px;height:15px;color:var(--brand);}
-  .publish{border:0;cursor:pointer;font-size:15px;font-weight:700;padding:13px 26px;border-radius:12px;background:linear-gradient(135deg,var(--orange),var(--orange-2));color:#fff;box-shadow:var(--shadow-orange);transition:transform .12s, box-shadow .15s;display:inline-flex;align-items:center;gap:8px;}
-  .publish:hover{transform:translateY(-1px);box-shadow:0 14px 28px -10px rgba(249,115,22,.55);}
+  .publish{border:0;cursor:pointer;font-size:15px;font-weight:700;padding:13px 26px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;box-shadow:var(--shadow-brand);transition:transform .12s, box-shadow .15s;display:inline-flex;align-items:center;gap:8px;}
+  .publish:hover{transform:translateY(-1px);box-shadow:0 14px 28px -10px rgba(99,102,241,.55);}
   .publish:disabled{opacity:.55;cursor:not-allowed;transform:none;}
 
   /* modal */
@@ -148,7 +146,7 @@
     <header class="hero">
       <span class="eyebrow"><span class="dot"></span>为静态内容而生的 · 极简 · 托管页</span>
       <h1>部署自定义 HTML 页面<br>的<span class="grad">最简方式</span></h1>
-      <p class="sub">一次上传，随处访问。把任意 HTML 页面交给 PageFly，立刻得到一个可分享的链接。</p>
+      <p class="sub">一次上传，随处访问。</p>
 
       <div class="card">
         <div class="card-body">
