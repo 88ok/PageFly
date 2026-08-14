@@ -77,51 +77,130 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Seg
   var html = ${safe};
   f.srcdoc = html;
 
-  // —— 锚点修复 ——
-  // 分享链接里的 #xxx 属于「内容文档(iframe)」而非顶层查看页。
-  // 顶层页面没有这些锚点元素，浏览器会把 hash 解析到顶层 → “找不到”。
-  // 这里把 hash 转发进 iframe，定位到 iframe 内的元素并滚动。
-  function scrollFrameToHash(hash){
-    if(!hash) return false;
+  /* ======================================================================
+   * 锚点导航修复（srcdoc iframe 完整方案）
+   *
+   * 问题：用户 HTML 通过 <iframe srcdoc> 渲染，内容里的 <a href="#sec">
+   *       和分享链接 /v/id#sec 的 hash 属于 iframe 文档而非顶层页面。
+   *       浏览器原生行为在 srcdoc 中不可靠，导致：
+   *       - 深链不定位
+   *       - 点击内部锚点时滚动位置错乱（出现"两个标题"等）
+   *
+   * 方案：完全接管 iframe 内 # 链接的点击 + 顶层 hash 的转发，
+   *       用 scrollTop 精确控制滚动位置。
+   * ====================================================================== */
+
+  // 在 iframe 文档中查找锚点目标元素
+  function findAnchor(doc, id) {
+    if (!doc || !id) return null;
+    return doc.getElementById(id)
+      || (doc.getElementsByName ? doc.getElementsByName(id)[0] : null)
+      || null;
+  }
+
+  // 滚动 iframe 到指定锚点（用 scrollTop 精确控制，避免 scrollIntoView 不可预测的偏移）
+  function scrollToHash(hash) {
+    if (!hash || hash === '#') return false;
     var id = decodeURIComponent(String(hash).replace(/^#/, ''));
-    if(!id) return false;
-    try{
+    if (!id) return false;
+    try {
       var doc = f.contentDocument;
-      if(!doc) return false;
-      var el = doc.getElementById(id)
-            || (doc.getElementsByName ? doc.getElementsByName(id)[0] : null);
-      if(!el) return false;
-      el.scrollIntoView({behavior:'smooth', block:'start'});
-      if(el.focus){ try{ el.focus(); }catch(e){} }
+      if (!doc || !doc.documentElement) return false;
+      var el = findAnchor(doc, id);
+      if (!el) return false;
+      // 直接设置 scrollTop，精确控制滚动位置
+      // 加 8px 微偏移让标题不被贴顶遮挡
+      var top = Math.max(0, el.offsetTop - 8);
+      doc.documentElement.scrollTop = top;
+      doc.body.scrollTop = top; // 兼容旧渲染模式
       return true;
-    }catch(e){ return false; }
+    } catch (e) { return false; }
   }
 
-  // 顶层 hash → iframe（深链直达 / 手动改 URL / 点后退前进）
-  function applyTopHash(){
-    scrollFrameToHash(location.hash);
+  // 同步 hash 到顶层 URL（用于分享深链）
+  function syncHashToParent(hash) {
+    if (!hash || hash === '#') return;
+    var target = location.pathname + location.search + hash;
+    if (location.href.split('#')[0] + hash !== location.href) {
+      history.replaceState(null, '', target);
+    }
   }
 
-  f.addEventListener('load', function(){
-    // 1) 初次加载即把顶层 hash 转发进 iframe
-    applyTopHash();
-    // 2) 监听 iframe 内部锚点导航，同步回顶层 URL，便于再次分享
-    try{
-      f.contentWindow.addEventListener('hashchange', function(){
-        var h = f.contentWindow.location.hash || '';
-        if(h && h !== location.hash){
-          history.replaceState(null, '', location.pathname + location.search + h);
+  // 等待 iframe 内容就绪（srcdoc 的 load 时机不稳定，用轮询兜底）
+  function whenIframeReady(cb, attempts) {
+    attempts = attempts || 0;
+    if (attempts > 80) { cb(null); return; } // 1.6s 超时
+    try {
+      var doc = f.contentDocument;
+      if (doc && doc.readyState === 'complete' && doc.body) { cb(doc); return; }
+    } catch (e) {}
+    setTimeout(function () { whenIframeReady(cb, attempts + 1); }, 20);
+  }
+
+  // 核心：拦截 iframe 内所有 <a href="#..."> 的点击，完全接管滚动
+  function hookIframeAnchors(doc) {
+    if (!doc) return;
+    try {
+      doc.addEventListener('click', function (ev) {
+        var a = ev.target.closest ? ev.target.closest('a') : null;
+        while (a && a.tagName !== 'A') { a = a.parentElement; }
+        if (!a) return;
+        var href = a.getAttribute('href');
+        if (!href || href.indexOf('#') !== 0) return; // 只处理 # 开头的同页锚点
+
+        // 完全阻止浏览器原生锚点行为（srcdoc 中原生行为不可靠）
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        var hash = href; // 如 "#section-2"
+
+        // 先尝试立即滚动
+        var ok = scrollToHash(hash);
+        if (ok) {
+          syncHashToParent(hash);
+          return;
         }
-      });
-    }catch(e){}
-  });
-  window.addEventListener('hashchange', applyTopHash);
 
-  document.getElementById('copyBtn').addEventListener('click', function(){
-    var b=document.getElementById('copyBtn');
-    navigator.clipboard.writeText(location.href).then(function(){
-      var t=b.textContent; b.textContent='已复制✓'; setTimeout(function(){b.textContent=t;},1500);
-    }).catch(function(){ alert('复制失败，请手动复制：'+location.href); });
+        // 元素可能还没渲染完（懒加载/动态内容），短延迟重试
+        var retries = 0;
+        var retryTimer = setInterval(function () {
+          retries++;
+          if (scrollToHash(hash)) {
+            clearInterval(retryTimer);
+            syncHashToParent(hash);
+          }
+          if (retries > 15) clearInterval(retryTimer); // 300ms 放弃
+        }, 20);
+      }, true); // capture phase 拦截，优先于冒泡
+    } catch (e) {
+      // 跨域/sandbox 限制时静默失败（allow-same-origin 已开启则不会触发）
+    }
+  }
+
+  // 初始化
+  whenIframeReady(function (doc) {
+    if (!doc) return;
+    // 1) 拦截 iframe 内部锚点点击
+    hookIframeAnchors(doc);
+    // 2) 处理深链：顶层 URL 带 # 时转发进 iframe
+    if (location.hash && location.hash !== '#') {
+      scrollToHash(location.hash);
+    }
+  });
+
+  // 顶层 hash 变化（后退/前进/手动改 URL）→ 转发进 iframe
+  window.addEventListener('hashchange', function () {
+    if (location.hash && location.hash !== '#') {
+      scrollToHash(location.hash);
+    }
+  });
+
+  // 复制链接按钮
+  document.getElementById('copyBtn').addEventListener('click', function () {
+    var b = document.getElementById('copyBtn');
+    navigator.clipboard.writeText(location.href).then(function () {
+      var t = b.textContent; b.textContent = '已复制✓'; setTimeout(function () { b.textContent = t; }, 1500);
+    }).catch(function () { alert('复制失败，请手动复制：' + location.href); });
   });
 </script>
 </body>
