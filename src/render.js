@@ -73,8 +73,50 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Seg
 </header>
 <iframe id="f" sandbox="${sandbox}"></iframe>
 <script>
+  var f = document.getElementById('f');
   var html = ${safe};
-  document.getElementById('f').srcdoc = html;
+  f.srcdoc = html;
+
+  // —— 锚点修复 ——
+  // 分享链接里的 #xxx 属于「内容文档(iframe)」而非顶层查看页。
+  // 顶层页面没有这些锚点元素，浏览器会把 hash 解析到顶层 → “找不到”。
+  // 这里把 hash 转发进 iframe，定位到 iframe 内的元素并滚动。
+  function scrollFrameToHash(hash){
+    if(!hash) return false;
+    var id = decodeURIComponent(String(hash).replace(/^#/, ''));
+    if(!id) return false;
+    try{
+      var doc = f.contentDocument;
+      if(!doc) return false;
+      var el = doc.getElementById(id)
+            || (doc.getElementsByName ? doc.getElementsByName(id)[0] : null);
+      if(!el) return false;
+      el.scrollIntoView({behavior:'smooth', block:'start'});
+      if(el.focus){ try{ el.focus(); }catch(e){} }
+      return true;
+    }catch(e){ return false; }
+  }
+
+  // 顶层 hash → iframe（深链直达 / 手动改 URL / 点后退前进）
+  function applyTopHash(){
+    scrollFrameToHash(location.hash);
+  }
+
+  f.addEventListener('load', function(){
+    // 1) 初次加载即把顶层 hash 转发进 iframe
+    applyTopHash();
+    // 2) 监听 iframe 内部锚点导航，同步回顶层 URL，便于再次分享
+    try{
+      f.contentWindow.addEventListener('hashchange', function(){
+        var h = f.contentWindow.location.hash || '';
+        if(h && h !== location.hash){
+          history.replaceState(null, '', location.pathname + location.search + h);
+        }
+      });
+    }catch(e){}
+  });
+  window.addEventListener('hashchange', applyTopHash);
+
   document.getElementById('copyBtn').addEventListener('click', function(){
     var b=document.getElementById('copyBtn');
     navigator.clipboard.writeText(location.href).then(function(){
