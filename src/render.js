@@ -3,6 +3,60 @@
 // - md 模式：用内置轻量渲染器把 Markdown 转成 HTML 并套排版样式注入，沙箱更严格（不跑脚本）。
 import { renderMarkdown } from "./markdown.js";
 
+/* ======================================================================
+ * 锚点修复脚本（注入到 iframe 内部，与用户内容同源、直接操作自己的 document）
+ *
+ * 为什么放在 iframe 内部而不是父页操作 f.contentDocument：
+ *   srcdoc iframe 的父页访问 contentDocument 受 sandbox / 时序影响极不稳定，
+ *   且 preventDefault 阻断原生跳转后，父页再 scrollIntoView 经常不生效。
+ *   把逻辑放进 iframe 自己处理，document 一定可访问，scrollIntoView 一定生效。
+ *   父页只负责用 postMessage 把顶层 hash 转发进 iframe（深链 / 前进后退）。
+ * ====================================================================== */
+const ANCHOR_FIX_SCRIPT = `<script>
+(function(){
+  function findAnchor(id){
+    if(!id) return null;
+    return document.getElementById(id) || (document.getElementsByName ? document.getElementsByName(id)[0] : null);
+  }
+  function scrollTo(id){
+    var el = findAnchor(id);
+    if(!el) return false;
+    try{ el.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){}
+    if(el.focus){ try{ el.focus({preventScroll:true}); }catch(_){ try{ el.focus(); }catch(__){} } }
+    return true;
+  }
+  function scrollToHash(hash){
+    if(!hash || hash === '#') return false;
+    return scrollTo(decodeURIComponent(String(hash).replace(/^#/,'')));
+  }
+  // 拦截 iframe 内所有 <a href="#..."> 点击：阻止原生跳转，自己滚
+  document.addEventListener('click', function(ev){
+    var node = ev.target;
+    if(!node || !node.closest) node = (node && node.parentNode) ? node.parentNode : null;
+    var a = (node && node.closest) ? node.closest('a') : null;
+    if(!a) return;
+    var href = a.getAttribute('href');
+    if(!href || href.charAt(0) !== '#') return; // 只处理同页 # 锚点
+    ev.preventDefault();
+    ev.stopPropagation();
+    var id = href.slice(1);
+    if(scrollTo(id)){
+      // 同步到顶层 URL（同源），便于再次分享深链
+      try{ parent.history.replaceState(null, '', parent.location.pathname + parent.location.search + (id ? '#'+id : '')); }catch(e){}
+    }
+  }, true);
+  // 接收父页转发来的深链 hash
+  window.addEventListener('message', function(ev){
+    var d = ev.data;
+    if(d && d.pfAnchor !== undefined) scrollToHash(d.pfAnchor);
+  });
+  // iframe 自身 hash 变化（如被设置）
+  window.addEventListener('hashchange', function(){ scrollToHash(location.hash); });
+  // 深链：直接读父页 hash（同源）
+  try{ if(parent.location.hash && parent.location.hash !== '#') scrollToHash(parent.location.hash); }catch(e){}
+})();
+</script>`;
+
 export function renderViewPage({ id, selfUrl, type = "html", raw = "", title = "" }) {
   const displayTitle = title?.trim?.() || id;
   let contentHtml;
@@ -20,7 +74,8 @@ export function renderViewPage({ id, selfUrl, type = "html", raw = "", title = "
     // md 不需要跑脚本，关掉 allow-scripts，比 html 视图更隔离
     sandbox = 'allow-popups allow-popups-to-escape-sandbox allow-same-origin';
   } else {
-    contentHtml = raw;
+    // html 模式：注入锚点修复脚本到 iframe 内部，与内容同源、可靠处理 # 导航
+    contentHtml = raw + ANCHOR_FIX_SCRIPT;
     sandbox =
       "allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-popups-to-escape-sandbox";
   }
@@ -77,134 +132,22 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Seg
   var html = ${safe};
   f.srcdoc = html;
 
-  /* ======================================================================
-   * 锚点导航修复（srcdoc iframe 完整方案）
-   *
-   * 问题：用户 HTML 通过 <iframe srcdoc> 渲染，内容里的 <a href="#sec">
-   *       和分享链接 /v/id#sec 的 hash 属于 iframe 文档而非顶层页面。
-   *       浏览器原生行为在 srcdoc 中不可靠，导致：
-   *       - 深链不定位
-   *       - 点击内部锚点时滚动位置错乱（出现"两个标题"等）
-   *
-   * 方案：完全接管 iframe 内 # 链接的点击 + 顶层 hash 的转发，
-   *       用 scrollTop 精确控制滚动位置。
-   * ====================================================================== */
-
-  // 在 iframe 文档中查找锚点目标元素
-  function findAnchor(doc, id) {
-    if (!doc || !id) return null;
-    return doc.getElementById(id)
-      || (doc.getElementsByName ? doc.getElementsByName(id)[0] : null)
-      || null;
+  /* 父页只负责把顶层 hash 转发进 iframe（深链 / 前进后退）。
+   * 真正的滚动由 iframe 内部注入的脚本处理——同源、可靠，不碰 contentDocument。 */
+  function postHashToFrame(){
+    try{
+      if(f.contentWindow) f.contentWindow.postMessage({ pfAnchor: (location.hash || '') }, '*');
+    }catch(e){}
   }
+  f.addEventListener('load', postHashToFrame);
+  setTimeout(postHashToFrame, 400); // srcdoc load 可能早于内部脚本就绪，补一次
+  window.addEventListener('hashchange', postHashToFrame);
 
-  // 滚动 iframe 到指定锚点。
-  // 用原生的 scrollIntoView：它是布局无关的——无论目标在「文档流」还是
-  // 「嵌套滚动容器 / 带定位父级」里，都能滚到正确位置（比 offsetTop 可靠）。
-  function scrollToHash(hash) {
-    if (!hash) return false;
-    try {
-      var doc = f.contentDocument;
-      if (!doc || !doc.documentElement) return false;
-      // 单独 # 或空 → 回到顶部
-      if (hash === '#' || hash === '') {
-        doc.documentElement.scrollTop = 0;
-        doc.body.scrollTop = 0;
-        return true;
-      }
-      var id = decodeURIComponent(String(hash).replace(/^#/, ''));
-      if (!id) return false;
-      var el = findAnchor(doc, id);
-      if (!el) return false;
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      // focus 但不触发二次滚动，兼顾键盘可达性
-      if (el.focus) { try { el.focus({ preventScroll: true }); } catch (e) { try { el.focus(); } catch (_) {} } }
-      return true;
-    } catch (e) { return false; }
-  }
-
-  // 同步 hash 到顶层 URL（用于分享深链）
-  function syncHashToParent(hash) {
-    if (!hash || hash === '#') return;
-    var target = location.pathname + location.search + hash;
-    if (location.href.split('#')[0] + hash !== location.href) {
-      history.replaceState(null, '', target);
-    }
-  }
-
-  // 等待 iframe 内容就绪（srcdoc 的 load 时机不稳定，用轮询兜底）
-  function whenIframeReady(cb, attempts) {
-    attempts = attempts || 0;
-    if (attempts > 80) { cb(null); return; } // 1.6s 超时
-    try {
-      var doc = f.contentDocument;
-      if (doc && doc.readyState === 'complete' && doc.body) { cb(doc); return; }
-    } catch (e) {}
-    setTimeout(function () { whenIframeReady(cb, attempts + 1); }, 20);
-  }
-
-  // 核心：拦截 iframe 内所有 <a href="#..."> 的点击，完全接管滚动
-  function hookIframeAnchors(doc) {
-    if (!doc) return;
-    try {
-      doc.addEventListener('click', function (ev) {
-        // 文本节点没有 closest，回退到父元素
-        var node = ev.target;
-        if (!node || !node.closest) node = (node && node.parentNode) ? node.parentNode : null;
-        var a = (node && node.closest) ? node.closest('a') : null;
-        if (!a) return;
-        var href = a.getAttribute('href');
-        if (!href || href.charAt(0) !== '#') return; // 只处理 # 开头的同页锚点
-
-        // 完全阻止浏览器原生锚点行为（srcdoc 中原生行为不可靠，且与自定义滚动冲突）
-        ev.preventDefault();
-        ev.stopPropagation();
-
-        var hash = href; // 如 "#section-2"
-
-        // 先尝试立即滚动
-        if (scrollToHash(hash)) { syncHashToParent(hash); return; }
-
-        // 元素可能还没渲染完（懒加载/动态内容），短延迟重试
-        var retries = 0;
-        var retryTimer = setInterval(function () {
-          if (scrollToHash(hash)) {
-            clearInterval(retryTimer);
-            syncHashToParent(hash);
-          } else if (++retries > 15) {
-            clearInterval(retryTimer); // 300ms 放弃
-          }
-        }, 20);
-      }, true); // capture phase 拦截，优先于冒泡
-    } catch (e) {
-      // 跨域/sandbox 限制时静默失败（allow-same-origin 已开启则不会触发）
-    }
-  }
-
-  // 初始化
-  whenIframeReady(function (doc) {
-    if (!doc) return;
-    // 1) 拦截 iframe 内部锚点点击
-    hookIframeAnchors(doc);
-    // 2) 处理深链：顶层 URL 带 # 时转发进 iframe
-    if (location.hash && location.hash !== '#') {
-      scrollToHash(location.hash);
-    }
-  });
-
-  // 顶层 hash 变化（后退/前进/手动改 URL）→ 转发进 iframe
-  window.addEventListener('hashchange', function () {
-    if (location.hash && location.hash !== '#') {
-      scrollToHash(location.hash);
-    }
-  });
-
-  // 复制链接按钮
-  document.getElementById('copyBtn').addEventListener('click', function () {
-    var b = document.getElementById('copyBtn');
-    navigator.clipboard.writeText(location.href).then(function () {
-      var t = b.textContent; b.textContent = '已复制✓'; setTimeout(function () { b.textContent = t; }, 1500);
-    }).catch(function () { alert('复制失败，请手动复制：' + location.href); });
+  document.getElementById('copyBtn').addEventListener('click', function(){
+    var b=document.getElementById('copyBtn');
+    navigator.clipboard.writeText(location.href).then(function(){
+      var t=b.textContent; b.textContent='已复制✓'; setTimeout(function(){b.textContent=t;},1500);
+    }).catch(function(){ alert('复制失败，请手动复制：'+location.href); });
   });
 </script>
 </body>
