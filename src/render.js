@@ -98,21 +98,27 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Seg
       || null;
   }
 
-  // 滚动 iframe 到指定锚点（用 scrollTop 精确控制，避免 scrollIntoView 不可预测的偏移）
+  // 滚动 iframe 到指定锚点。
+  // 用原生的 scrollIntoView：它是布局无关的——无论目标在「文档流」还是
+  // 「嵌套滚动容器 / 带定位父级」里，都能滚到正确位置（比 offsetTop 可靠）。
   function scrollToHash(hash) {
-    if (!hash || hash === '#') return false;
-    var id = decodeURIComponent(String(hash).replace(/^#/, ''));
-    if (!id) return false;
+    if (!hash) return false;
     try {
       var doc = f.contentDocument;
       if (!doc || !doc.documentElement) return false;
+      // 单独 # 或空 → 回到顶部
+      if (hash === '#' || hash === '') {
+        doc.documentElement.scrollTop = 0;
+        doc.body.scrollTop = 0;
+        return true;
+      }
+      var id = decodeURIComponent(String(hash).replace(/^#/, ''));
+      if (!id) return false;
       var el = findAnchor(doc, id);
       if (!el) return false;
-      // 直接设置 scrollTop，精确控制滚动位置
-      // 加 8px 微偏移让标题不被贴顶遮挡
-      var top = Math.max(0, el.offsetTop - 8);
-      doc.documentElement.scrollTop = top;
-      doc.body.scrollTop = top; // 兼容旧渲染模式
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // focus 但不触发二次滚动，兼顾键盘可达性
+      if (el.focus) { try { el.focus({ preventScroll: true }); } catch (e) { try { el.focus(); } catch (_) {} } }
       return true;
     } catch (e) { return false; }
   }
@@ -142,34 +148,32 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Seg
     if (!doc) return;
     try {
       doc.addEventListener('click', function (ev) {
-        var a = ev.target.closest ? ev.target.closest('a') : null;
-        while (a && a.tagName !== 'A') { a = a.parentElement; }
+        // 文本节点没有 closest，回退到父元素
+        var node = ev.target;
+        if (!node || !node.closest) node = (node && node.parentNode) ? node.parentNode : null;
+        var a = (node && node.closest) ? node.closest('a') : null;
         if (!a) return;
         var href = a.getAttribute('href');
-        if (!href || href.indexOf('#') !== 0) return; // 只处理 # 开头的同页锚点
+        if (!href || href.charAt(0) !== '#') return; // 只处理 # 开头的同页锚点
 
-        // 完全阻止浏览器原生锚点行为（srcdoc 中原生行为不可靠）
+        // 完全阻止浏览器原生锚点行为（srcdoc 中原生行为不可靠，且与自定义滚动冲突）
         ev.preventDefault();
         ev.stopPropagation();
 
         var hash = href; // 如 "#section-2"
 
         // 先尝试立即滚动
-        var ok = scrollToHash(hash);
-        if (ok) {
-          syncHashToParent(hash);
-          return;
-        }
+        if (scrollToHash(hash)) { syncHashToParent(hash); return; }
 
         // 元素可能还没渲染完（懒加载/动态内容），短延迟重试
         var retries = 0;
         var retryTimer = setInterval(function () {
-          retries++;
           if (scrollToHash(hash)) {
             clearInterval(retryTimer);
             syncHashToParent(hash);
+          } else if (++retries > 15) {
+            clearInterval(retryTimer); // 300ms 放弃
           }
-          if (retries > 15) clearInterval(retryTimer); // 300ms 放弃
         }, 20);
       }, true); // capture phase 拦截，优先于冒泡
     } catch (e) {
