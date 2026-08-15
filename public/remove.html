@@ -74,6 +74,18 @@
   .banner.ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;}
   .banner.err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;}
 
+  /* 弹框 */
+  .modal{position:fixed;inset:0;display:grid;place-items:center;z-index:50;padding:24px;}
+  .modal[hidden]{display:none;}
+  .modal-mask{position:absolute;inset:0;background:rgba(15,23,42,.45);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
+  .modal-card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:32px 28px;text-align:center;max-width:360px;width:100%;animation:pop .18s ease;}
+  @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98);}to{opacity:1;transform:none;}}
+  .modal-ico{width:56px;height:56px;border-radius:50%;background:#f0fdf4;color:var(--ok);display:grid;place-items:center;margin:0 auto 14px;box-shadow:0 6px 18px -8px rgba(22,163,74,.5);}
+  .modal-ico svg{width:30px;height:30px;}
+  .modal-title{font-size:19px;font-weight:800;margin:0 0 8px;letter-spacing:-.3px;}
+  .modal-text{color:var(--muted);font-size:14.5px;line-height:1.7;margin:0 0 22px;}
+  .modal-ok{width:100%;justify-content:center;}
+
   footer{text-align:center;color:var(--muted);font-size:13px;padding:30px 0 46px;}
   footer a{color:var(--muted);text-decoration:none;}
   footer a:hover{color:var(--brand-ink);}
@@ -99,7 +111,7 @@
 
     <section class="page">
       <h1>自助删除</h1>
-      <p class="lead">提交页面链接，让侵权或不当内容立即失效。链接处理由平台后台审核。</p>
+      <p class="lead">提交页面链接，让侵权或不当内容立即失效。</p>
 
       <div class="banner" id="banner"></div>
 
@@ -118,7 +130,7 @@
 
           <div class="note">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
-            <span>提交即表示您确认对该内容拥有删除权利或系权利受损方。提交后原链接将立即失效，普通访客无法再访问该内容。我们会通过您提供的联系方式告知处理结果。</span>
+            <span>提交即表示您确认对该内容拥有删除权利或系权利受损方。提交后原链接将立即失效，普通访客无法再访问该内容。</span>
           </div>
 
           <div class="actions">
@@ -139,6 +151,18 @@
     </footer>
   </div>
 
+  <div class="modal" id="modal" hidden>
+    <div class="modal-mask" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <h2 class="modal-title" id="modalTitle">删除申请已提交</h2>
+      <p class="modal-text">已收到删除申请，该链接已立即失效。</p>
+      <button class="btn-brand modal-ok" id="modalOk" type="button">知道了</button>
+    </div>
+  </div>
+
 <script>
   const $ = (id) => document.getElementById(id);
   const form = $('form');
@@ -148,6 +172,23 @@
   function showBanner(type, msg){
     banner.className = 'banner show ' + type;
     banner.textContent = msg;
+  }
+
+  // 校验联系方式：合法的邮箱 或 手机号（中国大陆 11 位 / E.164 国际格式）
+  function isValidContact(v){
+    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cnMobile = /^(\+?86[-\s]?)?1[3-9]\d{9}$/;
+    const e164 = /^\+[1-9]\d{6,14}$/;
+    return email.test(v) || cnMobile.test(v) || e164.test(v);
+  }
+
+  // 成功弹框
+  const modal = $('modal');
+  function showModal(){ if (modal) modal.hidden = false; }
+  function hideModal(){ if (modal) modal.hidden = true; }
+  if (modal) {
+    $('modalOk').addEventListener('click', hideModal);
+    modal.querySelector('[data-close]').addEventListener('click', hideModal);
   }
 
   const ERR_MSG = {
@@ -164,6 +205,7 @@
     const contact = $('contact').value.trim();
     const link = $('link').value.trim();
     if (!contact || !link) { showBanner('err', ERR_MSG.missing_fields); return; }
+    if (!isValidContact(contact)) { showBanner('err', '请填写有效的邮箱或手机号。'); return; }
 
     submitBtn.disabled = true;
     submitBtn.textContent = '提交中…';
@@ -175,7 +217,7 @@
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.ok) {
-        showBanner('ok', '已收到删除申请，该链接将立即失效。我们会通过您提供的联系方式告知处理结果。');
+        showModal();
         form.reset();
       } else {
         showBanner('err', ERR_MSG[data.error] || '提交失败，请稍后重试。');
