@@ -104,9 +104,8 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Seg
 .brand small{color:var(--muted);font-weight:500;font-size:12px;margin-left:2px;white-space:nowrap;}
 .vtitle{flex:1;min-width:0;padding:0 12px;text-align:center;color:var(--text);font-weight:600;font-size:14px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;}
 .vtitle:hover{color:var(--brand);}
+/* 手机端空间有限：隐藏标题与页面类型，保留 logo 与右侧「创建页面」「复制链接」按钮 */
 @media(max-width:640px){.vtitle{display:none;}}
-.type-badge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:3px 8px;border-radius:999px;background:#eef0ff;color:var(--brand-ink);margin-left:6px;white-space:nowrap;}
-.type-badge.md{background:#f0fdf4;color:#15803d;}
 .spacer{flex:1;}
 .btn{border:1px solid var(--border);background:#fff;color:var(--text);font-size:13px;padding:7px 12px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:.15s;white-space:nowrap;}
 .btn:hover{border-color:var(--brand);color:var(--brand);}
@@ -122,7 +121,6 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Seg
     <b>PageFly</b><small>· 静态托管</small>
   </a>
   <a class="vtitle" href="${selfUrl}?raw=1" target="_blank" rel="noopener" title="在新标签页打开">${escapeHtml(displayTitle)}</a>
-  <span class="type-badge ${type === "md" ? "md" : ""}">${type === "md" ? "Markdown" : "HTML"}</span>
   <a class="btn primary" href="/">＋ 创建页面</a>
   <button class="btn" id="copyBtn">复制链接</button>
 </header>
