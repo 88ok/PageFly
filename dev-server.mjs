@@ -5,6 +5,7 @@ import { extname, join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { savePage } from "./src/upload.js";
 import { renderViewPage } from "./src/render.js";
+import { removePage } from "./src/remove.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC = join(__dirname, "public");
@@ -15,6 +16,7 @@ const kv = {
   _m: new Map(),
   async put(k, v) { this._m.set(k, String(v)); },
   async get(k) { return this._m.has(k) ? this._m.get(k) : null; },
+  async delete(k) { this._m.delete(k); },
 };
 
 const MIME = {
@@ -51,6 +53,35 @@ const server = createServer(async (req, res) => {
       return json(res, 200, { id, url: `${u.origin}/v/${id}` });
     }
 
+    // 自助删除（软失效）：把链接 id 改名为 id+deldel+随机1位数字并删除原 key
+    if (req.method === "POST" && u.pathname === "/api/remove") {
+      const ct = req.headers["content-type"] || "";
+      let contact = "";
+      let link = "";
+      try {
+        if (ct.includes("application/json")) {
+          const b = await readJson(req);
+          contact = b.contact ?? "";
+          link = b.link ?? "";
+        } else {
+          const f = await readForm(req);
+          contact = f.get("contact") ?? "";
+          link = f.get("link") ?? "";
+        }
+      } catch (e) {
+        return json(res, 400, { error: "bad_request" });
+      }
+      if (!String(contact).trim() || !String(link).trim()) {
+        return json(res, 400, { error: "missing_fields" });
+      }
+      const r = await removePage({ PAGEDROP_KV: kv }, { contact: String(contact).trim(), link: String(link).trim() });
+      if (!r.ok) {
+        const code = r.error === "not_found" ? 404 : 400;
+        return json(res, code, { error: r.error });
+      }
+      return json(res, 200, { ok: true });
+    }
+
     // 查看 /v/:id
     if (req.method === "GET" && u.pathname.startsWith("/v/")) {
       const id = u.pathname.slice(3);
@@ -70,7 +101,14 @@ const server = createServer(async (req, res) => {
 
     // 静态资源
     let p = u.pathname === "/" ? "/index.html" : u.pathname;
-    const fp = join(PUBLIC, p);
+    let fp = join(PUBLIC, p);
+    // 无扩展名的路径尝试追加 .html（如 /tos → /tos.html），对齐 Cloudflare Pages 的 clean URL
+    if (!fp.startsWith(PUBLIC) || !existsSync(fp)) {
+      if (!extname(p)) {
+        const hp = join(PUBLIC, p + ".html");
+        if (hp.startsWith(PUBLIC) && existsSync(hp)) fp = hp;
+      }
+    }
     if (!fp.startsWith(PUBLIC) || !existsSync(fp)) {
       res.writeHead(404); return res.end("404 Not Found");
     }

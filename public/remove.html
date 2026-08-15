@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>自助删除 · PageFly</title>
+<meta name="description" content="PageFly 自助删除通道：提交页面链接与联系方式，让侵权或不当内容立即失效。" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="apple-touch-icon" href="/favicon.svg" />
+<style>
+  :root{
+    --bg:#f6f7fb;
+    --panel:#ffffff;
+    --ink:#0f172a;
+    --muted:#64748b;
+    --line:#e7e9f0;
+    --brand:#6366f1;
+    --brand-2:#8b5cf6;
+    --brand-ink:#4f46e5;
+    --brand-bg:rgba(99,102,241,.10);
+    --ok:#16a34a;
+    --err:#dc2626;
+    --radius:16px;
+    --shadow:0 1px 2px rgba(15,23,42,.04), 0 12px 32px -12px rgba(79,70,229,.18);
+    --shadow-sm:0 1px 2px rgba(15,23,42,.05), 0 4px 14px -8px rgba(15,23,42,.12);
+    --shadow-brand:0 10px 24px -10px rgba(99,102,241,.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(139,92,246,.10), transparent 60%),
+      radial-gradient(1000px 500px at 0% 0%, rgba(99,102,241,.10), transparent 55%),
+      var(--bg);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px;}
+
+  nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0;}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:.2px;text-decoration:none;color:var(--ink);}
+  .brand .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--brand-2));display:grid;place-items:center;box-shadow:var(--shadow-sm);}
+  .brand .mark svg{width:17px;height:17px;color:#fff;}
+  nav .back{color:var(--muted);font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:.15s;}
+  nav .back:hover{color:var(--brand-ink);}
+
+  .page{padding:14px 0 8px;}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 6px;font-weight:800;letter-spacing:-.5px;}
+  .lead{color:var(--muted);font-size:15px;margin:0 0 22px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:30px 30px;margin-bottom:20px;}
+  .field{margin-bottom:18px;}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;}
+  .field input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--ink);background:#fbfbfe;outline:0;transition:.15s;}
+  .field input:focus{border-color:var(--brand);background:#fff;}
+  .field .tip{font-size:12.5px;color:var(--muted);margin-top:7px;}
+  .field .tip code{background:#f1f5f9;border-radius:6px;padding:1px 6px;font-size:12px;}
+
+  .actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:6px;}
+  .btn-brand{border:0;cursor:pointer;font-size:15px;font-weight:700;padding:12px 24px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;box-shadow:var(--shadow-brand);transition:transform .12s, box-shadow .15s;display:inline-flex;align-items:center;gap:8px;}
+  .btn-brand:hover{transform:translateY(-1px);box-shadow:0 14px 28px -10px rgba(99,102,241,.55);}
+  .btn-brand:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+
+  .note{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:12px;padding:14px 16px;font-size:13.5px;line-height:1.7;margin-top:4px;display:flex;gap:10px;align-items:flex-start;}
+  .note svg{width:18px;height:18px;flex:none;margin-top:2px;color:#ea580c;}
+
+  /* result banner */
+  .banner{display:none;border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.7;margin-bottom:18px;}
+  .banner.show{display:block;animation:fade .18s ease;}
+  @keyframes fade{from{opacity:0;}to{opacity:1;}}
+  .banner.ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;}
+  .banner.err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;}
+
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:30px 0 46px;}
+  footer a{color:var(--muted);text-decoration:none;}
+  footer a:hover{color:var(--brand-ink);}
+  @media (max-width:720px){
+    .card{padding:24px 20px;}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="/">
+        <span class="mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+        </span>
+        PageFly
+      </a>
+      <a class="back" href="/">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        返回首页
+      </a>
+    </nav>
+
+    <section class="page">
+      <h1>自助删除</h1>
+      <p class="lead">提交页面链接，让侵权或不当内容立即失效。链接处理由平台后台审核。</p>
+
+      <div class="banner" id="banner"></div>
+
+      <div class="card">
+        <form id="form" novalidate>
+          <div class="field">
+            <label for="contact">联系方式（邮箱或手机号）</label>
+            <input type="text" id="contact" name="contact" autocomplete="email" placeholder="用于接收处理结果的邮箱或手机号" />
+          </div>
+
+          <div class="field">
+            <label for="link">需要删除的页面链接</label>
+            <input type="text" id="link" name="link" placeholder="https://你的域名/v/xxxx 或 /v/xxxx" />
+            <div class="tip">填写分享出去的页面地址，形如 <code>https://pagefly.example/v/abc123</code></div>
+          </div>
+
+          <div class="note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+            <span>提交即表示您确认对该内容拥有删除权利或系权利受损方。提交后原链接将立即失效，普通访客无法再访问该内容。我们会通过您提供的联系方式告知处理结果。</span>
+          </div>
+
+          <div class="actions">
+            <button class="btn-brand" id="submitBtn" type="submit">
+              提交删除申请
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <footer>
+      © 2026 PageFly 页面托管 &nbsp;·&nbsp; 为 HTML 与 Markdown 而生
+      &nbsp;·&nbsp; <a href="/tos">服务协议 / 免责声明</a>
+      &nbsp;·&nbsp; <a href="/remove">自助删除</a>
+      &nbsp;·&nbsp; <a href="/dash">管理后台</a>
+    </footer>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const form = $('form');
+  const banner = $('banner');
+  const submitBtn = $('submitBtn');
+
+  function showBanner(type, msg){
+    banner.className = 'banner show ' + type;
+    banner.textContent = msg;
+  }
+
+  const ERR_MSG = {
+    missing_fields: '请填写联系方式与需要删除的页面链接。',
+    invalid_link: '链接格式不正确，请填写形如 https://…/v/xxxx 的页面地址。',
+    not_found: '未找到该页面，可能已被删除或链接有误。',
+    bad_request: '提交失败，请检查输入后重试。',
+    kv_not_bound: '服务暂不可用，请稍后再试。',
+  };
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    banner.className = 'banner';
+    const contact = $('contact').value.trim();
+    const link = $('link').value.trim();
+    if (!contact || !link) { showBanner('err', ERR_MSG.missing_fields); return; }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '提交中…';
+    try {
+      const res = await fetch('/api/remove', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ contact, link }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
+        showBanner('ok', '已收到删除申请，该链接将立即失效。我们会通过您提供的联系方式告知处理结果。');
+        form.reset();
+      } else {
+        showBanner('err', ERR_MSG[data.error] || '提交失败，请稍后重试。');
+      }
+    } catch (err) {
+      showBanner('err', '网络错误，请稍后重试。');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '提交删除申请 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>';
+    }
+  });
+</script>
+</body>
+</html>
