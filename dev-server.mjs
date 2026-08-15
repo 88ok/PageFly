@@ -18,6 +18,13 @@ const kv = {
   async get(k) { return this._m.has(k) ? this._m.get(k) : null; },
   async delete(k) { this._m.delete(k); },
 };
+// 举报/删除历史表（独立 KV，对应生产 PAGEDROP_DELREQ_KV）
+const delreqKv = {
+  _m: new Map(),
+  async put(k, v) { this._m.set(k, String(v)); },
+  async get(k) { return this._m.has(k) ? this._m.get(k) : null; },
+  async delete(k) { this._m.delete(k); },
+};
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -74,7 +81,7 @@ const server = createServer(async (req, res) => {
       if (!String(contact).trim() || !String(link).trim()) {
         return json(res, 400, { error: "missing_fields" });
       }
-      const r = await removePage({ PAGEDROP_KV: kv }, { contact: String(contact).trim(), link: String(link).trim() });
+      const r = await removePage({ PAGEDROP_KV: kv, PAGEDROP_DELREQ_KV: delreqKv }, { contact: String(contact).trim(), link: String(link).trim() });
       if (!r.ok) {
         const code = r.error === "not_found" ? 404 : 400;
         return json(res, code, { error: r.error });
